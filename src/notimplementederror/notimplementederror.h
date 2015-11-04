@@ -8,17 +8,15 @@ class NotImplementedError : std::logic_error{
 
     public:
         NotImplementedError(std::string function) : std::logic_error(function), function(function){}
-        virtual const char* what() const noexcept { return std::logic_error::what(); };
+        virtual const char* what() const noexcept;
     private:
         std::string function;
 
 };
 
-/*
-virtual const char* what() const{
-    function.append(" is not yet implemented.");
-    return function.c_str();
+const char* NotImplementedError::what() const noexcept{
+    std::string result = function + " is not yet implemented.";
+    return result.c_str();
 }
-*/
 
 #endif

@@ -1,4 +1,4 @@
-#define BOOST_DYN_LINK
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE NotImplementedErrorTest
 #include<boost/test/unit_test.hpp>
 #include "../src/notimplementederror/notimplementederror.h"
