@@ -4,7 +4,7 @@
 #include<stdexcept>
 #include<string>
 
-class NotImplementedError : std::logic_error{
+class NotImplementedError : std::logic_error {
 
     public:
         NotImplementedError(std::string function) : std::logic_error(function), function(function){}
