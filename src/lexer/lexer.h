@@ -2,21 +2,21 @@
 #define LEXER
 
 #include<string>
-#include<vector>
+using std::string;
 #include<unordered_map>
+using std::unordered_map;
 #include "../token/token.h"
 #include "commenttype.h"
 
 #define LEXER_EOF 257
 #define MAX_IDLEN 255
 
-using namespace std;
-
 class Lexer{
 
     public:
         Token getToken();
-        Lexer(const char* scanp);
+        Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable);
+        Lexer(){}
 
     private:
         // Helper functions.
@@ -24,7 +24,7 @@ class Lexer{
         void advanceScanp();
 
         // Members.
-        unordered_map<string, Token> lexemes;
+        unordered_map<string, Token> *symboltable;
         unsigned int curline;
         unsigned int curcol;
         const char* scanp;

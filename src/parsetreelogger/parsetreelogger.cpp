@@ -5,17 +5,21 @@
 using std::string;
 using std::to_string;
 #include<cstdlib>
+using std::size_t;
 using std::getenv; // Access env variables.
 #include<ctime>
 using std::tm; // Struct to get current date.
 using std::localtime;
 using std::time_t;
 using std::time;
+#include<boost/filesystem.hpp>
+using namespace boost::filesystem;
 #include "parsetreelogger.h"
 #include "parsetreeloggerexception.h"
 
 ParseTreeLogger::ParseTreeLogger(string sourceProgramFile){
-    this->sourceProgramFile = sourceProgramFile;
+    path p(sourceProgramFile);
+    this->sourceProgramFile = p.filename().string();
     indent = 0;
     this->openFile();
     this->printHeader();
@@ -23,7 +27,7 @@ ParseTreeLogger::ParseTreeLogger(string sourceProgramFile){
 }
 
 ParseTreeLogger::~ParseTreeLogger(){
-    this->printClosingTag(this->sourceProgramFile);
+    this->dumpTagStack();
     this->closeFile();
 }
 
@@ -76,10 +80,14 @@ void ParseTreeLogger::printClosingTag(string tagName){
     } else {
         ParseTreeLoggerException exception(CLOSE_ON_UNOPENED_TAG_ERROR, tagName);
         this->printErrorTag(exception.what());
-        while(!this->openTagsStack.empty()){
-            this->printClosingTag(this->openTagsStack.back());
-        }
-        throw exception;
+        this->dumpTagStack();
+    }
+}
+
+void ParseTreeLogger::dumpTagStack(){
+    size_t size = this->openTagsStack.size();
+    while(this->openTagsStack.size()){
+        this->printClosingTag(this->openTagsStack.back());
     }
 }
 
@@ -101,7 +109,6 @@ bool ParseTreeLogger::matchTagStack(string tagName){
 }
 
 void ParseTreeLogger::printErrorTag(string message){
-    this->printIndent();
     this->logFile << "<error>" << message << "</error>\n";
 }
 

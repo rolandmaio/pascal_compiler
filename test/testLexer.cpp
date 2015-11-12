@@ -6,20 +6,23 @@ using std::string;
 using std::cout;
 using std::endl;
 #include "../src/lexer/lexer.h"
+#include "../src/token/token.h"
 
 int main(){
 
     cout << "Executing testLexer.cpp" << endl;
 
-    ifstream file("./pascalPrograms/helloworld.pas");
+    /*
+    ifstream file();
     string program((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
     cout << "program: " << endl << program << endl;
     int fileSize = program.length();
     const char* buffer = program.c_str();
 
     const char* scanp = buffer;
-
-    Lexer lexer = Lexer(scanp);
+    */
+    unordered_map<string, Token> symboltable;//, *symboltable_ptr;
+    Lexer lexer = Lexer("./pascalPrograms/helloworld.pas", &symboltable);
 
     Token tok;
     int i = 0;

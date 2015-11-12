@@ -1,61 +1,185 @@
 #ifndef PARSER
 #define PARSER
 
-#include "token.h"
-#include "lexer.h"
+#include<unordered_map>
+using std::unordered_map;
+#include<string>
+using std::string;
+#include "../token/token.h"
+#include "../lexer/lexer.h"
+#include "../token/tag.h"
+#include "../parsetreelogger/parsetreelogger.h"
 
 class Parser{
 
     public:
         bool parse();
-        Parser(const char* sourceFile):lexer(sourceFile){}
+        Parser(const char* sourceFile);
 
     private:
         Lexer lexer;
+        unordered_map<string, Token> symboltable;
         Token curtoken;
+        ParseTreeLogger parseTreeLogger;
 
-        void program();
-        void program_heading();
-        void program_parameter_list();
-        void program_block();
+        void match(Tag t);
 
+        void actual_parameter();
+        void actual_parameter_list();
+        void adding_operator();
+        void apostrophe_image();
+        void array_type();
+        void array_variable();
+        void assignment_statement();
+        void base_type();
+        void block();
+        void Boolean_expression();
+        void bound_identifier();
+        void buffer_variable();
+        void case_constant();
+        void case_constant_list();
+        void case_index();
+        void case_list_element();
+        void case_statement();
+        void character_string();
+        void component_type();
+        void component_variable();
+        void compound_statement();
+        void conditional_statement();
+        void conformant_array_parameter_specification();
+        void conformant_array_schema();
+        void constant();
+        void constant_definition();
+        void constant_definition_part();
+        void constant_identifier();
+        void control_variable();
+        void digit();
+        void digit_sequence();
+        void directive();
+        void domain_type();
+        void else_part();
+        void empty_statement();
+        void entire_variable();
+        void enumerated_type();
+        void expression();
+        void factor();
+        void field_designator();
+        void field_designator_identifier();
+        void field_identifier();
+        void field_list();
+        void field_specififer();
+        void file_type();
+        void file_variable();
+        void final_value();
+        void fixed_part();
+        void for_statement();
+        void formal_parameter_list();
+        void formal_parameter_section();
+        void fractional_part();
+        void function_block();
+        void function_declaration();
+        void function_designator();
+        void function_heading();
+        void function_identification();
+        void function_identifier();
+        void functional_parameter_specification();
+        void goto_statement();
+        void identified_variable();
         void identifier();
         void identifier_list();
-
-        void block();
-        void label_declaration_part();
-        void constant_definition_part();
-        void type_definition_part();
-        void variable_declaration_part();
-        void procedure_and_function_declaration_part();
-        void statement_part();
-
+        void if_statement();
+        void index_expression();
+        void index_type();
+        void index_type_specification();
+        void indexed_variable();
+        void initial_value();
         void label();
-        void constant_definition();
-        void constant();
-        void sign();
-        void unsigned_number();
-        void constant_identifier();
-        void character_string();
-
-        void unsigned_integer();
-        void unsigned_real();
-        void digit_sequence();
-        void fractional_part();
+        void label_declaration_part();
+        void letter();
+        void member_designator();
+        void multiplying_operator();
+        void new_ordinal_type();
+        void new_pointer_type();
+        void new_structured_type();
+        void new_type();
+        void ordinal_type();
+        void ordinal_type_identifier();
+        void packed_conformant_array_schema();
+        void pointer_type();
+        void procedural_parameter_specification();
+        void procedure_and_function_declaration_part();
+        void procedure_block();
+        void procedure_declaration();
+        void procedure_heading();
+        void procedure_identification();
+        void procedure_identifier();
+        void procedure_statement();
+        void program();
+        void program_block();
+        void program_heading();
+        void program_parameter_list();
+        void read_parameter_list();
+        void readln_parameter_list();
+        void real_type_identifier();
+        void record_section();
+        void record_type();
+        void record_variable();
+        void record_variable_list();
+        void relational_operator();
+        void repeat_statement();
+        void repetitive_statement();
+        void result_type();
         void scale_factor();
-
+        void set_constructor();
+        void set_type();
+        void sign();
+        void signed_integer();
+        void signed_number();
+        void signed_real();
+        void simple_expression();
+        void simple_statement();
+        void simple_type();
+        void simple_type_identifier();
+        void special_symbol();
+        void statement();
+        void statement_part();
+        void statement_sequence();
+        void string_character();
+        void string_element();
+        void structured_element();
+        void structured_type();
+        void structured_type_identifier();
+        void subrange_type();
+        void tag_field();
+        void tag_type();
+        void term();
         void type_definition();
+        void type_definition_part();
         void type_denoter();
         void type_identifier();
-        void new_type();
+        void unpacked_conformant_array_schema();
+        void unpacked_structured_type();
+        void unsigned_constant();
+        void unsigned_integer();
+        void unsigned_number();
+        void unsigned_real();
+        void value_conformant_array_specification();
+        void value_parameter_specification();
+        void variable_access();
+        void variable_conformant_array_specification();
+        void variable_declaration();
+        void variable_declaration_part();
+        void variable_identifier();
+        void variable_parameter_specification();
+        void variant();
+        void variant_part();
+        void variant_selector();
+        void while_statement();
+        void with_statement();
+        void word_symbol();
+        void write_parameter_list();
+        void writeln_parameter_list();
 
-        void new_ordinal_type();
-        void new_structured_type();
-        void new_pointer_type();
-
-        void enumerated_type();
-        void subrange_type();
-
-}
+};
 
 #endif

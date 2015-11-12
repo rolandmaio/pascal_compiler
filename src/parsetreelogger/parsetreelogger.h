@@ -30,7 +30,7 @@ class ParseTreeLogger {
         ofstream logFile;
         string logFileName;
         string sourceProgramFile;
-        size_t indent;
+        int indent;
         vector<string> openTagsStack;
 
         void openFile();
@@ -43,6 +43,7 @@ class ParseTreeLogger {
         void decrementIndent();
         bool matchTagStack(string tagName);
         void printErrorTag(string tagName);
+        void dumpTagStack();
         string computeFileName();
         string currentDateTime();
 

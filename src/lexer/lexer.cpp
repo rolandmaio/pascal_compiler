@@ -7,13 +7,15 @@ using std::isdigit;
 using std::isalpha;
 #include<cstdlib>
 using std::exit;
-#include<iostream>
-using std::cout;
-using std::endl;
 #include<utility>
 using std::make_pair;
 #include<string>
 using std::string;
+#include<fstream>
+using std::ifstream;
+#include<iostream>
+using std::cout;
+using std::endl;
 #include "lexer.h"
 #include "../token/token.h"
 #include "../token/identifiertoken.h"
@@ -23,20 +25,27 @@ using std::string;
 
 #define ENDOFFILE 127
 
-Lexer::Lexer(const char* scanp){
+Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
 
     curline = 1;
     curcol = 1;
-    this->scanp = scanp;
+    this->symboltable = symboltable;
 
     for(int i = 0; i < defaultTokens.size(); ++i){
-        lexemes.insert(defaultTokens[i]);
+        this->symboltable->insert(defaultTokens[i]);
     }
+
+    ifstream file(sourceFile);
+    string program((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+    scanp = program.c_str();
+    cout << "Source program: " << program << endl;
 
 }
 
 void Lexer::advanceScanp(){
 
+    cout << "advancing scanp value before: " << (int)*scanp << endl;
+    cout << "address of scanp before: " << scanp << endl;
     if(*scanp == '\n'){
         ++curline;
         curcol = 1;
@@ -44,6 +53,9 @@ void Lexer::advanceScanp(){
         ++curcol;
     }
     ++scanp;
+    cout << "value after: " << (int)*scanp << endl;
+    cout << "String at scanp after: " << scanp << endl;
+    printf("address of scanp: %p\n", scanp);
 
 }
 
@@ -121,7 +133,12 @@ void Lexer::stripComments(CommentType commentType){
 
 Token Lexer::getToken(){
 
+    cout << "Enterintg Lexer::getToken()" << endl;
+    cout << "String at scanp: " << scanp << endl;
+    printf("address of scanp: %p\n", scanp);
     // Strip white space and comments.
+    cout << "White space check on: " << (int)*scanp << ":" << endl;
+    cout << "isspace(*scanp): " << isspace(*scanp) << endl;
     while(isspace(*scanp)){
 
         advanceScanp();
@@ -131,7 +148,7 @@ Token Lexer::getToken(){
 
             advanceScanp();
             if(*scanp != '*'){
-                return lexemes["("];
+                return (*symboltable)["("];
             }
             stripComments(PSTAR);
 
@@ -139,7 +156,7 @@ Token Lexer::getToken(){
         if(*scanp == '/'){
             advanceScanp();
             if(*scanp != '/'){
-                return lexemes["/"];
+                return (*symboltable)["/"];
             }
             stripComments(LINE);
         }
@@ -151,6 +168,7 @@ Token Lexer::getToken(){
     }
 
     // Process identifiers and keywords.
+    cout << "Alphabetic check on: " << *scanp << endl;
     if(isalpha(*scanp)){
         int i = 0;
         while(
@@ -164,15 +182,16 @@ Token Lexer::getToken(){
         }
         curname[i] = '\0';
         string lexeme(curname);
-        if(!lexemes.count(lexeme)){
-            lexemes.insert(
+        if(!symboltable->count(lexeme)){
+            symboltable->insert(
                 make_pair<string, Token>(lexeme.c_str(), IdentifierToken(lexeme))
             );
         }
-        return lexemes[lexeme];
+        return (*symboltable)[lexeme];
     }
 
     // Process literal numeric values.
+    cout << "Numeric check on: " << *scanp << endl;
     if(isdigit(*scanp)){
         int value = 0;
         do{
@@ -218,61 +237,61 @@ Token Lexer::getToken(){
     // Process operators.
     switch(anchor){
         case '+':
-            return lexemes["+"];
+            return (*symboltable)["+"];
         case '-':
-            return lexemes["-"];
+            return (*symboltable)["-"];
         case '*':
-            return lexemes["*"];
+            return (*symboltable)["*"];
         case '/':
-            return lexemes["/"];
+            return (*symboltable)["/"];
         case '=':
-            return lexemes["="];
+            return (*symboltable)["="];
         case '<':
             anchor = *scanp;
             advanceScanp();
             if(anchor == '>'){
-                return lexemes["<>"];
+                return (*symboltable)["<>"];
             } else if (anchor == '='){
-                return lexemes["<="];
+                return (*symboltable)["<="];
             } else {
-                return lexemes["<"];
+                return (*symboltable)["<"];
             }
         case '>':
             anchor = *scanp;
             advanceScanp();
             if(anchor == '='){
-                return lexemes[">="];
+                return (*symboltable)[">="];
             } else {
-                return lexemes[">"];
+                return (*symboltable)[">"];
             }
         case '[':
-            return lexemes["["];
+            return (*symboltable)["["];
         case ']':
-            return lexemes["]"];
+            return (*symboltable)["]"];
         case '.':
             anchor = *scanp;
             advanceScanp();
             if(anchor == '.'){
-                return lexemes[".."];
+                return (*symboltable)[".."];
             } else {
-                return lexemes["."];
+                return (*symboltable)["."];
             }
         case ',':
-            return lexemes[","];
+            return (*symboltable)[","];
         case ':':
             anchor = *scanp;
             advanceScanp();
             if(anchor == '='){
-                return lexemes[":="];
+                return (*symboltable)[":="];
             } else {
-                return lexemes[":"];
+                return (*symboltable)[":"];
             }
         case ';':
-            return lexemes[";"];
+            return (*symboltable)[";"];
         case '(':
-            return lexemes["("];
+            return (*symboltable)["("];
         case ')':
-            return lexemes[")"];
+            return (*symboltable)[")"];
         case '\x7f':
             return Token(END_OF_FILE);
     }
