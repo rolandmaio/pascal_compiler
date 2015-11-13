@@ -5,6 +5,7 @@ using std::pair;
 #include<string>
 using std::string;
 #include "token.h"
+#include "proceduretoken.h"
 
 vector<pair<string, Token> > defaultTokens = {
 
@@ -60,10 +61,15 @@ vector<pair<string, Token> > defaultTokens = {
     make_pair<string, Token>("set", Token(SET)),
     make_pair<string, Token>("then", Token(THEN)),
     make_pair<string, Token>("to", Token(TO)),
-    make_pair<string, Token>("type", Token(TYPE)),
+    make_pair<string, Token>("type", Token(TYP)),
     make_pair<string, Token>("until", Token(UNTIL)),
     make_pair<string, Token>("var", Token(VAR)),
     make_pair<string, Token>("while", Token(WHILE)),
     make_pair<string, Token>("with", Token(WITH)),
+
+    make_pair<string, Token>("write", Token(TK_A_PROC, "write")),
+    make_pair<string, Token>("writeln", Token(TK_A_PROC, "writeln")),
+    make_pair<string, Token>("read", Token(TK_A_PROC, "read")),
+    make_pair<string, Token>("readln", Token(TK_A_PROC, "readln"))
 
 };

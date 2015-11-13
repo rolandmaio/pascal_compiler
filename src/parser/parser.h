@@ -6,21 +6,27 @@ using std::unordered_map;
 #include<string>
 using std::string;
 #include "../token/token.h"
+#include "../token/identifiertoken.h"
+#include "../token/proceduretoken.h"
 #include "../lexer/lexer.h"
 #include "../token/tag.h"
 #include "../parsetreelogger/parsetreelogger.h"
+#include "../type/type.h"
+#include "../type/kind.h"
+#include "../synthesizer/synthesizer.h"
 
 class Parser{
 
     public:
         bool parse();
-        Parser(const char* sourceFile);
+        Parser(const char* sourceFile, Synthesizer *synthesizer);
 
     private:
         Lexer lexer;
         unordered_map<string, Token> symboltable;
         Token curtoken;
         ParseTreeLogger parseTreeLogger;
+        Synthesizer *synthesizer;
 
         void match(Tag t);
 
@@ -61,7 +67,7 @@ class Parser{
         void empty_statement();
         void entire_variable();
         void enumerated_type();
-        void expression();
+        Type expression();
         void factor();
         void field_designator();
         void field_designator_identifier();
@@ -112,7 +118,7 @@ class Parser{
         void procedure_declaration();
         void procedure_heading();
         void procedure_identification();
-        void procedure_identifier();
+        ProcedureToken procedure_identifier();
         void procedure_statement();
         void program();
         void program_block();
@@ -146,7 +152,7 @@ class Parser{
         void statement_sequence();
         void string_character();
         void string_element();
-        void structured_element();
+        void structured_statement();
         void structured_type();
         void structured_type_identifier();
         void subrange_type();
@@ -177,6 +183,7 @@ class Parser{
         void while_statement();
         void with_statement();
         void word_symbol();
+        void write_parameter();
         void write_parameter_list();
         void writeln_parameter_list();
 

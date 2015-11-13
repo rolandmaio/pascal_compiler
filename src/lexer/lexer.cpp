@@ -1,6 +1,8 @@
 #ifndef LEXER_IMP
 #define LEXER_IMP
 
+#include<cstring>
+using std::strcpy;
 #include<cctype>
 using std::isspace;
 using std::isdigit;
@@ -37,9 +39,15 @@ Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
 
     ifstream file(sourceFile);
     string program((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
-    scanp = program.c_str();
+    buffer = new char[1000];
+    scanp = strcpy(buffer, program.c_str());
+    //scanp = program.c_str();
     cout << "Source program: " << program << endl;
 
+}
+
+Lexer::~Lexer(){
+    delete[] buffer;
 }
 
 void Lexer::advanceScanp(){
@@ -56,6 +64,7 @@ void Lexer::advanceScanp(){
     cout << "value after: " << (int)*scanp << endl;
     cout << "String at scanp after: " << scanp << endl;
     printf("address of scanp: %p\n", scanp);
+    printf("address of buffer: %p\n", buffer);
 
 }
 
@@ -184,7 +193,7 @@ Token Lexer::getToken(){
         string lexeme(curname);
         if(!symboltable->count(lexeme)){
             symboltable->insert(
-                make_pair<string, Token>(lexeme.c_str(), IdentifierToken(lexeme))
+                make_pair<string, Token>(lexeme.c_str(), Token(ID, lexeme))
             );
         }
         return (*symboltable)[lexeme];

@@ -17,6 +17,7 @@ class Lexer{
         Token getToken();
         Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable);
         Lexer(){}
+        ~Lexer();
 
     private:
         // Helper functions.
@@ -27,6 +28,7 @@ class Lexer{
         unordered_map<string, Token> *symboltable;
         unsigned int curline;
         unsigned int curcol;
+        char* buffer;
         const char* scanp;
         char curname[MAX_IDLEN + 1]; // + 1 for the null character \0
 

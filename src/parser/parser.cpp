@@ -8,8 +8,9 @@ using std::endl;
 #include "../lexer/lexer.h"
 #include "../notimplementederror/notimplementederror.h"
 
-Parser::Parser(const char* sourceFile) : parseTreeLogger(sourceFile){
+Parser::Parser(const char* sourceFile, Synthesizer *synthesizer) : parseTreeLogger(sourceFile){
     lexer = Lexer(sourceFile, &symboltable);
+    this->synthesizer = synthesizer;
     curtoken = lexer.getToken();
 }
 
@@ -146,7 +147,7 @@ void Parser::case_statement(){
 
 void Parser::character_string(){
     parseTreeLogger.logEntry("character_string");
-    throw NotImplementedError("character_string");
+    match(STRING);
     parseTreeLogger.logExit("character_string");
 }
 
@@ -163,11 +164,11 @@ void Parser::component_variable(){
 }
 
 void Parser::compound_statement(){
-    //parseTreeLogger.logEntry("compound_statement");
+    parseTreeLogger.logEntry("compound_statement");
     match(BEGIN);
     statement_sequence();
     match(END);
-    //parseTreeLogger.logExit("compound_statement");
+    parseTreeLogger.logExit("compound_statement");
 }
 
 void Parser::conditional_statement(){
@@ -256,7 +257,6 @@ void Parser::else_part(){
 
 void Parser::empty_statement(){
     parseTreeLogger.logEntry("empty_statement");
-    throw NotImplementedError("empty_statement");
     parseTreeLogger.logExit("empty_statement");
 }
 
@@ -272,15 +272,53 @@ void Parser::enumerated_type(){
     parseTreeLogger.logExit("enumerated_type");
 }
 
-void Parser::expression(){
+Type Parser::expression(){
     parseTreeLogger.logEntry("expression");
-    throw NotImplementedError("expression");
+    simple_expression();
+    switch(curtoken.getTag()){
+        case EQ:
+        case NEQ:
+        case LT:
+        case GT:
+        case LEQ:
+        case GEQ:
+        case IN:
+            match(curtoken.getTag());
+            simple_expression();
+            break;
+        default:
+            break;
+    }
     parseTreeLogger.logExit("expression");
 }
 
 void Parser::factor(){
     parseTreeLogger.logEntry("factor");
-    throw NotImplementedError("factor");
+    switch(curtoken.getTag()){
+        case INT:
+        case REAL:
+        case STRING:
+        case TK_A_CONST:
+            unsigned_constant();
+            break;
+        case TK_A_FUNC:
+            function_designator();
+            break;
+        case LBRACKET:
+            set_constructor();
+            break;
+        case LPAREN:
+            match(LPAREN);
+            expression();
+            break;
+        case NOT:
+            match(NOT);
+            factor();
+            break;
+        default:
+            variable_access();
+            break;
+    }
     parseTreeLogger.logExit("factor");
 }
 
@@ -597,15 +635,30 @@ void Parser::procedure_identification(){
     parseTreeLogger.logExit("procedure_identification");
 }
 
-void Parser::procedure_identifier(){
+ProcedureToken Parser::procedure_identifier(){
     parseTreeLogger.logEntry("procedure_identifier");
-    throw NotImplementedError("procedure_identifier");
+    ProcedureToken result = ProcedureToken(curtoken.getLexeme());
+    match(curtoken.getTag());
     parseTreeLogger.logExit("procedure_identifier");
+    return result;
 }
 
 void Parser::procedure_statement(){
     parseTreeLogger.logEntry("procedure_statement");
-    throw NotImplementedError("procedure_statement");
+    ProcedureToken proc = procedure_identifier();
+    cout << "Returning from procedure_identifier()" << endl;
+    cout << "proc.getTag(): " << proc.getTag() << " proc.getLexeme(): " << proc.getLexeme() << endl;
+    if(proc.getLexeme() == "read"){
+        read_parameter_list();
+    } else if(proc.getLexeme() == "readln"){
+        readln_parameter_list();
+    } else if(proc.getLexeme() == "write"){
+        write_parameter_list();
+    } else if(proc.getLexeme() == "writeln"){
+        writeln_parameter_list();
+    } else if(curtoken.getTag() == LPAREN){
+        actual_parameter_list();
+    }
     parseTreeLogger.logExit("procedure_statement");
 }
 
@@ -625,7 +678,7 @@ void Parser::program_block(){
 }
 
 void Parser::program_heading(){
-    //parseTreeLogger.logEntry("program_heading");
+    parseTreeLogger.logEntry("program_heading");
     match(PROGRAM);
     identifier();
     if(curtoken.getTag() == LPAREN){
@@ -633,7 +686,7 @@ void Parser::program_heading(){
         program_parameter_list();
         match(RPAREN);
     }
-    //parseTreeLogger.logExit("program_heading");
+    parseTreeLogger.logExit("program_heading");
 }
 
 void Parser::program_parameter_list(){
@@ -752,13 +805,37 @@ void Parser::signed_real(){
 
 void Parser::simple_expression(){
     parseTreeLogger.logEntry("simple_expression");
-    throw NotImplementedError("simple_expression");
+    if(curtoken.getTag() == PLUS || curtoken.getTag() == MINUS) sign();
+    term();
+    while(curtoken.getTag() == PLUS ||
+          curtoken.getTag() == MINUS ||
+          curtoken.getTag() == OR){
+          simple_expression();
+    }
     parseTreeLogger.logExit("simple_expression");
 }
 
 void Parser::simple_statement(){
     parseTreeLogger.logEntry("simple_statement");
-    throw NotImplementedError("simple_statement");
+    switch(curtoken.getTag()){
+        case GOTO:
+            goto_statement();
+            break;
+        case TK_A_PROC:
+            procedure_statement();
+            break;
+        case TK_A_FUNC:
+        case TK_A_ARRAY:
+        case TK_A_RECORD:
+        case TK_A_PTR:
+        case TK_A_FILE:
+        case TK_A_VAR:
+            assignment_statement();
+            break;
+        default:
+            empty_statement();
+            break;
+    }
     parseTreeLogger.logExit("simple_statement");
 }
 
@@ -782,7 +859,23 @@ void Parser::special_symbol(){
 
 void Parser::statement(){
     parseTreeLogger.logEntry("statement");
-    throw NotImplementedError("statement");
+    if(curtoken.getTag() == LABEL){
+        label();
+        match(SEMICOLON);
+    }
+    switch(curtoken.getTag()){
+        case BEGIN:
+        case IF:
+        case CASE:
+        case REPEAT:
+        case WHILE:
+        case FOR:
+        case WITH:
+            structured_statement();
+            break;
+        default:
+            simple_statement();
+    }
     parseTreeLogger.logExit("statement");
 }
 
@@ -814,10 +907,10 @@ void Parser::string_element(){
     parseTreeLogger.logExit("string_element");
 }
 
-void Parser::structured_element(){
-    parseTreeLogger.logEntry("structured_element");
-    throw NotImplementedError("structured_element");
-    parseTreeLogger.logExit("structured_element");
+void Parser::structured_statement(){
+    parseTreeLogger.logEntry("structured_statement");
+    throw NotImplementedError("structured_statement");
+    parseTreeLogger.logExit("structured_statement");
 }
 
 void Parser::structured_type(){
@@ -852,7 +945,15 @@ void Parser::tag_type(){
 
 void Parser::term(){
     parseTreeLogger.logEntry("term");
-    throw NotImplementedError("term");
+    factor();
+    while(curtoken.getTag() == STAR ||
+          curtoken.getTag() == FSLASH ||
+          curtoken.getTag() == DIV ||
+          curtoken.getTag() == MOD ||
+          curtoken.getTag() == AND){
+        match(curtoken.getTag());
+        factor();
+    }
     parseTreeLogger.logExit("term");
 }
 
@@ -864,8 +965,8 @@ void Parser::type_definition(){
 
 void Parser::type_definition_part(){
     parseTreeLogger.logEntry("type_definition_part");
-    if(curtoken.getTag() == TYPE){
-        match(TYPE);
+    if(curtoken.getTag() == TYP){
+        match(TYP);
         while(curtoken.getTag() == ID){
             type_definition();
             match(SEMICOLON);
@@ -900,7 +1001,23 @@ void Parser::unpacked_structured_type(){
 
 void Parser::unsigned_constant(){
     parseTreeLogger.logEntry("unsigned_constant");
-    throw NotImplementedError("unsigned_constant");
+    switch(curtoken.getTag()){
+        case INT:
+        case REAL:
+            unsigned_number();
+            break;
+        case STRING:
+            character_string();
+            break;
+        case TK_A_CONST:
+            constant_identifier();
+            break;
+        case NIL:
+            break;
+        default:
+            throw 1;
+            break;
+    }
     parseTreeLogger.logExit("unsigned_constant");
 }
 
@@ -1012,6 +1129,21 @@ void Parser::word_symbol(){
     parseTreeLogger.logExit("word_symbol");
 }
 
+void Parser::write_parameter(){
+    parseTreeLogger.logEntry("write_parameter");
+    Type t = expression();
+    synthesizer->genPrintCode(t);
+    if(curtoken.getTag() == COLON){
+        t = expression();
+        synthesizer->genPrintCode(t);
+    }
+    if(curtoken.getTag() == COLON){
+        t = expression();
+        synthesizer->genPrintCode(t);
+    }
+    parseTreeLogger.logExit("write_parameter");
+}
+
 void Parser::write_parameter_list(){
     parseTreeLogger.logEntry("write_parameter_list");
     throw NotImplementedError("write_parameter_list");
@@ -1020,7 +1152,20 @@ void Parser::write_parameter_list(){
 
 void Parser::writeln_parameter_list(){
     parseTreeLogger.logEntry("writeln_parameter_list");
-    throw NotImplementedError("writeln_parameter_list");
+    if(curtoken.getTag() == LPAREN){
+        match(LPAREN);
+        if(curtoken.getTag() == TK_A_FILE){
+            file_variable();
+        } else {
+            write_parameter();
+        }
+        while(curtoken.getTag() == COMMA){
+            match(COMMA);
+            write_parameter();
+        }
+        synthesizer->genPrintLn();
+        match(RPAREN);
+    }
     parseTreeLogger.logExit("writeln_parameter_list");
 }
 

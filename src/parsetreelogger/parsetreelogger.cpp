@@ -79,13 +79,13 @@ void ParseTreeLogger::printClosingTag(string tagName){
         this->logFile << "</" << tagName << ">\n";
     } else {
         ParseTreeLoggerException exception(CLOSE_ON_UNOPENED_TAG_ERROR, tagName);
+        this->incrementIndent();
         this->printErrorTag(exception.what());
         this->dumpTagStack();
     }
 }
 
 void ParseTreeLogger::dumpTagStack(){
-    size_t size = this->openTagsStack.size();
     while(this->openTagsStack.size()){
         this->printClosingTag(this->openTagsStack.back());
     }
@@ -109,7 +109,7 @@ bool ParseTreeLogger::matchTagStack(string tagName){
 }
 
 void ParseTreeLogger::printErrorTag(string message){
-    this->logFile << "<error>" << message << "</error>\n";
+    this->logFile << "  <error>" << message << "</error>\n";
 }
 
 void ParseTreeLogger::logEntry(string functionName){

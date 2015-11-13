@@ -4,13 +4,15 @@ using std::string;
 using std::cout;
 using std::endl;
 #include "parser/parser.h"
+#include "synthesizer/synthesizer.h"
 
 int main(int argc, char *argv[]){
     cout << "Entering main." << endl;
     //char *sourceFile = argv[1];
-    string sourceFile = "../test/pascalPrograms/helloworld.pas";
+    string sourceFile = "../test/pascalPrograms/helloworld_simple.pas";
     cout << "Instantiating parser." << endl;
-    Parser parser(sourceFile.c_str());
+    Synthesizer synthesizer("helloworld_simple.eml");
+    Parser parser(sourceFile.c_str(), &synthesizer);
     cout << "Calling Parser.parse" << endl;
     parser.parse();
 }

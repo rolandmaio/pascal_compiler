@@ -60,7 +60,7 @@ enum Tag{
     SET,
     THEN,                   // 50
     TO,
-    TYPE,
+    TYP,
     UNTIL,
     VAR,
     WHILE,
@@ -73,7 +73,18 @@ enum Tag{
     // End of file flag.
     END_OF_FILE,            // 60
     // Flag value for bad syntax.
-    BAD
+    BAD,
+
+    // Token types that can only be determined by the parser as they require
+    // knowledge of the grammar.
+    TK_A_VAR,
+    TK_A_PROC,
+    TK_A_FUNC,
+    TK_A_ARRAY,
+    TK_A_RECORD,
+    TK_A_PTR,
+    TK_A_FILE,
+    TK_A_CONST
 
 };
 
