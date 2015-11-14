@@ -9,7 +9,7 @@ using std::string;
 class StringToken : public Token {
 
     public:
-        StringToken(string value) : Token(STRING), value(value){};
+        StringToken(string value) : Token(STRING, value), value(value){};
         string getValue(){ return value; }
 
     private:

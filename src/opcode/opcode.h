@@ -1,0 +1,21 @@
+#ifndef OPCODE
+#define OPCODE
+
+enum Opcode{
+
+    WRITE_INT,
+    WRITE_REAL,
+    WRITE_STRING,
+    WRITE_BOOLEAN,
+    WRITE_LINE,
+
+    PUSH_STRING,
+    PUSH_INT,
+
+    INTEGER_ADDITION,
+
+    TERMINATE_PROGRAM
+
+};
+
+#endif

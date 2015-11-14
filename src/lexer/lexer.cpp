@@ -39,7 +39,7 @@ Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
 
     ifstream file(sourceFile);
     string program((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
-    buffer = new char[1000];
+    buffer = new char[1<<10];//(char*) malloc(1000);
     scanp = strcpy(buffer, program.c_str());
     //scanp = program.c_str();
     cout << "Source program: " << program << endl;
@@ -47,6 +47,7 @@ Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
 }
 
 Lexer::~Lexer(){
+    //free(buffer);
     delete[] buffer;
 }
 
@@ -208,7 +209,10 @@ Token Lexer::getToken(){
             advanceScanp();
         } while(isdigit(*scanp));
         if(*scanp != '.'){
-            return IntegerToken(value);
+            cout << "lexer value: " << value << endl;
+            Token tok(INT, value);
+            cout << "tok.getValue(): " << tok.getValue() << endl;
+            return tok;
         } else {
             advanceScanp();
         }
@@ -234,8 +238,10 @@ Token Lexer::getToken(){
                 if(*scanp == '\''){
                     curname[i++] = '\'';
                 } else {
-                    curname[i] == '\0';
-                    return StringToken(curname);
+                    curname[i] = '\0';
+                    cout << "curname: " << curname << endl;
+                    cout << "string(curname): " << string(curname) << endl;
+                    return StringToken(string(curname));
                 }
             }
         }

@@ -145,10 +145,15 @@ void Parser::case_statement(){
     parseTreeLogger.logExit("case_statement");
 }
 
-void Parser::character_string(){
+Type Parser::character_string(){
     parseTreeLogger.logEntry("character_string");
+    StringToken strtok(curtoken.getLexeme());
+    size_t addr = synthesizer->writeStringLiteralToHeader(strtok);
+    synthesizer->genOpCode(PUSH_STRING);
+    synthesizer->genAddress(addr);
     match(STRING);
     parseTreeLogger.logExit("character_string");
+    return Type(STRING_K);
 }
 
 void Parser::component_type(){
@@ -213,7 +218,7 @@ void Parser::constant_definition_part(){
     parseTreeLogger.logExit("constant_definition_part");
 }
 
-void Parser::constant_identifier(){
+Type Parser::constant_identifier(){
     parseTreeLogger.logEntry("constant_identifier");
     throw NotImplementedError("constant_identifier");
     parseTreeLogger.logExit("constant_identifier");
@@ -274,7 +279,7 @@ void Parser::enumerated_type(){
 
 Type Parser::expression(){
     parseTreeLogger.logEntry("expression");
-    simple_expression();
+    Type t = simple_expression();
     switch(curtoken.getTag()){
         case EQ:
         case NEQ:
@@ -290,36 +295,39 @@ Type Parser::expression(){
             break;
     }
     parseTreeLogger.logExit("expression");
+    return t;
 }
 
-void Parser::factor(){
+Type Parser::factor(){
     parseTreeLogger.logEntry("factor");
+    Type t;
     switch(curtoken.getTag()){
         case INT:
         case REAL:
         case STRING:
         case TK_A_CONST:
-            unsigned_constant();
+            t = unsigned_constant();
             break;
         case TK_A_FUNC:
-            function_designator();
+            t = function_designator();
             break;
         case LBRACKET:
-            set_constructor();
+            t = set_constructor();
             break;
         case LPAREN:
             match(LPAREN);
-            expression();
+            t = expression();
             break;
         case NOT:
             match(NOT);
-            factor();
+            t = factor();
             break;
         default:
-            variable_access();
+            t = variable_access();
             break;
     }
     parseTreeLogger.logExit("factor");
+    return t;
 }
 
 void Parser::field_designator(){
@@ -412,7 +420,7 @@ void Parser::function_declaration(){
     parseTreeLogger.logExit("function_declaration");
 }
 
-void Parser::function_designator(){
+Type Parser::function_designator(){
     parseTreeLogger.logEntry("function_designator");
     throw NotImplementedError("function_designator");
     parseTreeLogger.logExit("function_designator");
@@ -767,7 +775,7 @@ void Parser::scale_factor(){
     parseTreeLogger.logExit("scale_factor");
 }
 
-void Parser::set_constructor(){
+Type Parser::set_constructor(){
     parseTreeLogger.logEntry("set_constructor");
     throw NotImplementedError("set_constructor");
     parseTreeLogger.logExit("set_constructor");
@@ -803,16 +811,23 @@ void Parser::signed_real(){
     parseTreeLogger.logExit("signed_real");
 }
 
-void Parser::simple_expression(){
+Type Parser::simple_expression(){
     parseTreeLogger.logEntry("simple_expression");
     if(curtoken.getTag() == PLUS || curtoken.getTag() == MINUS) sign();
-    term();
-    while(curtoken.getTag() == PLUS ||
-          curtoken.getTag() == MINUS ||
-          curtoken.getTag() == OR){
-          simple_expression();
+    Type t1 = term(), t2;
+    switch(curtoken.getTag()){
+        case PLUS:
+            match(PLUS);
+            t2 = simple_expression();
+            //synthesizer->genOpCode(synthesizer->lookupAdditionCode(t1, t2));
+            t1 = synthesizer->genAdditionCode(t1, t2);
+            break;
+        case MINUS:
+        case OR:
+            throw NotImplementedError("MINUS and OR addition operators in simple_expression.");
     }
     parseTreeLogger.logExit("simple_expression");
+    return t1;
 }
 
 void Parser::simple_statement(){
@@ -943,9 +958,9 @@ void Parser::tag_type(){
     parseTreeLogger.logExit("tag_type");
 }
 
-void Parser::term(){
+Type Parser::term(){
     parseTreeLogger.logEntry("term");
-    factor();
+    Type t = factor();
     while(curtoken.getTag() == STAR ||
           curtoken.getTag() == FSLASH ||
           curtoken.getTag() == DIV ||
@@ -955,6 +970,7 @@ void Parser::term(){
         factor();
     }
     parseTreeLogger.logExit("term");
+    return t;
 }
 
 void Parser::type_definition(){
@@ -999,41 +1015,58 @@ void Parser::unpacked_structured_type(){
     parseTreeLogger.logExit("unpacked_structured_type");
 }
 
-void Parser::unsigned_constant(){
+Type Parser::unsigned_constant(){
     parseTreeLogger.logEntry("unsigned_constant");
+    Type t;
     switch(curtoken.getTag()){
         case INT:
         case REAL:
-            unsigned_number();
+            t = unsigned_number();
             break;
         case STRING:
-            character_string();
+            t = character_string();
             break;
         case TK_A_CONST:
-            constant_identifier();
+            t = constant_identifier();
             break;
         case NIL:
+            t = Type(NIL_K);
             break;
         default:
             throw 1;
             break;
     }
     parseTreeLogger.logExit("unsigned_constant");
+    return t;
 }
 
-void Parser::unsigned_integer(){
+Type Parser::unsigned_integer(){
     parseTreeLogger.logEntry("unsigned_integer");
-    throw NotImplementedError("unsigned_integer");
+    //IntegerToken* inttok_ptr = (IntegerToken*) &curtoken;
+    cout << "parser value: " << curtoken.getValue() << endl;
+    size_t addr = synthesizer->writeUnsignedIntegerLiteralToHeader(curtoken);
+    synthesizer->genOpCode(PUSH_INT);
+    synthesizer->genAddress(addr);
+    match(INT);
     parseTreeLogger.logExit("unsigned_integer");
+    return Type(INTEGER_K);
 }
 
-void Parser::unsigned_number(){
+Type Parser::unsigned_number(){
     parseTreeLogger.logEntry("unsigned_number");
-    throw NotImplementedError("unsigned_number");
+    Type t;
+    if(curtoken.getTag() == INT){
+        t = unsigned_integer();
+    } else if(curtoken.getTag() == REAL){
+        t = unsigned_real();
+    } else {
+        throw 1;
+    }
     parseTreeLogger.logExit("unsigned_number");
+    return t;
 }
 
-void Parser::unsigned_real(){
+Type Parser::unsigned_real(){
     parseTreeLogger.logEntry("unsigned_real");
     throw NotImplementedError("unsigned_real");
     parseTreeLogger.logExit("unsigned_real");
@@ -1051,7 +1084,7 @@ void Parser::value_parameter_specification(){
     parseTreeLogger.logExit("value_parameter_specification");
 }
 
-void Parser::variable_access(){
+Type Parser::variable_access(){
     parseTreeLogger.logEntry("variable_access");
     throw NotImplementedError("variable_access");
     parseTreeLogger.logExit("variable_access");

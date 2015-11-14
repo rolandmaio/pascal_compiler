@@ -8,6 +8,7 @@ using std::string;
 #include "../token/token.h"
 #include "../token/identifiertoken.h"
 #include "../token/proceduretoken.h"
+#include "../token/integertoken.h"
 #include "../lexer/lexer.h"
 #include "../token/tag.h"
 #include "../parsetreelogger/parsetreelogger.h"
@@ -47,7 +48,7 @@ class Parser{
         void case_index();
         void case_list_element();
         void case_statement();
-        void character_string();
+        Type character_string();
         void component_type();
         void component_variable();
         void compound_statement();
@@ -57,7 +58,7 @@ class Parser{
         void constant();
         void constant_definition();
         void constant_definition_part();
-        void constant_identifier();
+        Type constant_identifier();
         void control_variable();
         void digit();
         void digit_sequence();
@@ -68,7 +69,7 @@ class Parser{
         void entire_variable();
         void enumerated_type();
         Type expression();
-        void factor();
+        Type factor();
         void field_designator();
         void field_designator_identifier();
         void field_identifier();
@@ -84,7 +85,7 @@ class Parser{
         void fractional_part();
         void function_block();
         void function_declaration();
-        void function_designator();
+        Type function_designator();
         void function_heading();
         void function_identification();
         void function_identifier();
@@ -136,13 +137,13 @@ class Parser{
         void repetitive_statement();
         void result_type();
         void scale_factor();
-        void set_constructor();
+        Type set_constructor();
         void set_type();
         void sign();
         void signed_integer();
         void signed_number();
         void signed_real();
-        void simple_expression();
+        Type simple_expression();
         void simple_statement();
         void simple_type();
         void simple_type_identifier();
@@ -158,20 +159,20 @@ class Parser{
         void subrange_type();
         void tag_field();
         void tag_type();
-        void term();
+        Type term();
         void type_definition();
         void type_definition_part();
         void type_denoter();
         void type_identifier();
         void unpacked_conformant_array_schema();
         void unpacked_structured_type();
-        void unsigned_constant();
-        void unsigned_integer();
-        void unsigned_number();
-        void unsigned_real();
+        Type unsigned_constant();
+        Type unsigned_integer();
+        Type unsigned_number();
+        Type unsigned_real();
         void value_conformant_array_specification();
         void value_parameter_specification();
-        void variable_access();
+        Type variable_access();
         void variable_conformant_array_specification();
         void variable_declaration();
         void variable_declaration_part();
