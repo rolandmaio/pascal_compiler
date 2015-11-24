@@ -15,9 +15,10 @@ class Lexer{
 
     public:
         Token getToken();
+        void addToStack(Token tok);
         Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable);
         Lexer(){}
-        ~Lexer();
+        ~Lexer(){ delete[] buffer; }
 
     private:
         // Helper functions.
@@ -26,6 +27,7 @@ class Lexer{
 
         // Members.
         unordered_map<string, Token> *symboltable;
+        vector<Token> stack;
         unsigned int curline;
         unsigned int curcol;
         char* buffer;

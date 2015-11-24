@@ -3,6 +3,8 @@
 
 #include<unordered_map>
 using std::unordered_map;
+#include<vector>
+using std::vector;
 #include<string>
 using std::string;
 #include "../token/token.h"
@@ -20,16 +22,24 @@ class Parser{
 
     public:
         bool parse();
-        Parser(const char* sourceFile, Synthesizer *synthesizer);
+        Parser(
+            const char* sourceFile,
+            Lexer *lexer,
+            Synthesizer *synthesizer,
+            ParseTreeLogger *parseTreeLogger,
+            unordered_map<string, Token> *symboltable
+        );
 
     private:
-        Lexer lexer;
-        unordered_map<string, Token> symboltable;
+        Lexer *lexer;
+        unordered_map<string, Token> *symboltable;
         Token curtoken;
-        ParseTreeLogger parseTreeLogger;
+        ParseTreeLogger *parseTreeLogger;
         Synthesizer *synthesizer;
+        string headLabel;
 
         void match(Tag t);
+        void fillGotoPlaceHolders();
 
         void actual_parameter();
         void actual_parameter_list();
@@ -59,14 +69,14 @@ class Parser{
         void constant_definition();
         void constant_definition_part();
         Type constant_identifier();
-        void control_variable();
+        Type control_variable();
         void digit();
         void digit_sequence();
         void directive();
         void domain_type();
         void else_part();
         void empty_statement();
-        void entire_variable();
+        Type entire_variable();
         void enumerated_type();
         Type expression();
         Type factor();
@@ -77,7 +87,7 @@ class Parser{
         void field_specififer();
         void file_type();
         void file_variable();
-        void final_value();
+        Type final_value();
         void fixed_part();
         void for_statement();
         void formal_parameter_list();
@@ -92,15 +102,15 @@ class Parser{
         void functional_parameter_specification();
         void goto_statement();
         void identified_variable();
-        void identifier();
-        void identifier_list();
+        string identifier();
+        vector<string> identifier_list();
         void if_statement();
         void index_expression();
         void index_type();
         void index_type_specification();
         void indexed_variable();
-        void initial_value();
-        void label();
+        Type initial_value();
+        string label();
         void label_declaration_part();
         void letter();
         void member_designator();
@@ -162,8 +172,8 @@ class Parser{
         Type term();
         void type_definition();
         void type_definition_part();
-        void type_denoter();
-        void type_identifier();
+        Type type_denoter();
+        string type_identifier();
         void unpacked_conformant_array_schema();
         void unpacked_structured_type();
         Type unsigned_constant();
@@ -176,7 +186,7 @@ class Parser{
         void variable_conformant_array_specification();
         void variable_declaration();
         void variable_declaration_part();
-        void variable_identifier();
+        Type variable_identifier();
         void variable_parameter_specification();
         void variant();
         void variant_part();

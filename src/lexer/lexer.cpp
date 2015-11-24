@@ -15,6 +15,7 @@ using std::make_pair;
 using std::string;
 #include<fstream>
 using std::ifstream;
+using std::istreambuf_iterator;
 #include<iostream>
 using std::cout;
 using std::endl;
@@ -46,10 +47,16 @@ Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
 
 }
 
+void Lexer::addToStack(Token tok){
+    stack.push_back(tok);
+}
+
+/*
 Lexer::~Lexer(){
     //free(buffer);
     delete[] buffer;
 }
+*/
 
 void Lexer::advanceScanp(){
 
@@ -144,6 +151,12 @@ void Lexer::stripComments(CommentType commentType){
 Token Lexer::getToken(){
 
     cout << "Enterintg Lexer::getToken()" << endl;
+    if(!stack.empty()){
+        cout << "The Lexer's stack is nonempty; returning top element" << endl;
+        Token tok = stack.back();
+        stack.pop_back();
+        return tok;
+    }
     cout << "String at scanp: " << scanp << endl;
     printf("address of scanp: %p\n", scanp);
     // Strip white space and comments.
@@ -216,14 +229,14 @@ Token Lexer::getToken(){
         } else {
             advanceScanp();
         }
-        double fraction = 0.0,
-               multiplier = 1.0 / 10.0;
+        float fraction = 0.0,
+              multiplier = 1.0 / 10.0;
         do{
             fraction += (*scanp - '0') * multiplier;
             multiplier /= 10.0;
             advanceScanp();
         } while(isdigit(*scanp));
-        return RealToken(value + fraction);
+        return Token(REAL, value + fraction);
     }
 
     // Process literal string values.
@@ -239,8 +252,6 @@ Token Lexer::getToken(){
                     curname[i++] = '\'';
                 } else {
                     curname[i] = '\0';
-                    cout << "curname: " << curname << endl;
-                    cout << "string(curname): " << string(curname) << endl;
                     return StringToken(string(curname));
                 }
             }

@@ -69,6 +69,7 @@ enum Tag{
     INT,
     REAL,
     STRING,
+    BOOLEAN,
 
     // End of file flag.
     END_OF_FILE,            // 60
@@ -77,6 +78,7 @@ enum Tag{
 
     // Token types that can only be determined by the parser as they require
     // knowledge of the grammar.
+    TK_A_LABEL,
     TK_A_VAR,
     TK_A_PROC,
     TK_A_FUNC,
@@ -84,7 +86,8 @@ enum Tag{
     TK_A_RECORD,
     TK_A_PTR,
     TK_A_FILE,
-    TK_A_CONST
+    TK_A_CONST,
+    TK_GOTO
 
 };
 

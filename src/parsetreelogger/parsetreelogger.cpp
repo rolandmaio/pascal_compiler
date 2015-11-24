@@ -18,6 +18,7 @@ using namespace boost::filesystem;
 #include "parsetreeloggerexception.h"
 
 ParseTreeLogger::ParseTreeLogger(string sourceProgramFile){
+    this->openTagsStack = new vector<string>();
     path p(sourceProgramFile);
     this->sourceProgramFile = p.filename().string();
     indent = 0;
@@ -29,6 +30,7 @@ ParseTreeLogger::ParseTreeLogger(string sourceProgramFile){
 ParseTreeLogger::~ParseTreeLogger(){
     this->dumpTagStack();
     this->closeFile();
+    delete this->openTagsStack;
 }
 
 void ParseTreeLogger::openFile(){
@@ -67,7 +69,7 @@ void ParseTreeLogger::printHeader(){
 void ParseTreeLogger::printOpeningTag(string tagName){
     this->printIndent();
     this->logFile << "<" << tagName << ">\n";
-    this->openTagsStack.push_back(tagName);
+    this->openTagsStack->push_back(tagName);
     this->incrementIndent();
 }
 
@@ -75,7 +77,7 @@ void ParseTreeLogger::printClosingTag(string tagName){
     this->decrementIndent();
     this->printIndent();
     if(this->matchTagStack(tagName)){
-        this->openTagsStack.pop_back();
+        this->openTagsStack->pop_back();
         this->logFile << "</" << tagName << ">\n";
     } else {
         ParseTreeLoggerException exception(CLOSE_ON_UNOPENED_TAG_ERROR, tagName);
@@ -86,8 +88,8 @@ void ParseTreeLogger::printClosingTag(string tagName){
 }
 
 void ParseTreeLogger::dumpTagStack(){
-    while(this->openTagsStack.size()){
-        this->printClosingTag(this->openTagsStack.back());
+    while(this->openTagsStack->size()){
+        this->printClosingTag(this->openTagsStack->back());
     }
 }
 
@@ -105,7 +107,7 @@ void ParseTreeLogger::decrementIndent(){
 }
 
 bool ParseTreeLogger::matchTagStack(string tagName){
-    return this->openTagsStack.back() == tagName;
+    return this->openTagsStack->back() == tagName;
 }
 
 void ParseTreeLogger::printErrorTag(string message){

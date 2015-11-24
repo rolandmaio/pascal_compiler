@@ -21,11 +21,40 @@ class Synthesizer {
         void genPrintLn();
         void writeToFile();
         void genOpCode(Opcode opcode);
+        void genPushVarOpcode(Kind k);
+        void genPopVarOpcode(Kind k);
         void genAddress(size_t addr);
+        void genBoolean(bool val);
         void writeFile();
         size_t writeStringLiteralToHeader(StringToken strtok);
+        size_t allocateStringVariableInHeader();
+        size_t allocatIntegerVariableInHeader();
+        size_t allocateRealVariableInHeader();
+        size_t allocateBooleanVariableInHeader();
         size_t writeUnsignedIntegerLiteralToHeader(Token tok);
+        size_t writeUnsignedRealLiteralToHeader(Token tok);
         Type genAdditionCode(Type t1, Type t2);
+        Type genMultiplicationCode(Type t1, Type t2);
+        Type genSubtractionCode(Type t1, Type t2);
+        Type genEqualityCode(Type t);
+        Type genEqualityCode(Type t1, Type t2);
+        Type genInequalityCode(Type t);
+        Type genInequalityCode(Type t1, Type t2);
+        Type genLessThanCode(Type t);
+        Type genLessThanCode(Type t1, Type t2);
+        Type genGreaterThanCode(Type t);
+        Type genGreaterThanCode(Type t1, Type t2);
+        Type genLessOrEqualCode(Type t);
+        Type genLessOrEqualCode(Type t1, Type t2);
+        Type genGreaterOrEqualCode(Type t);
+        Type genGreaterOrEqualCode(Type t1, Type t2);
+        size_t makePlaceHolderAddress();
+        void fillPlaceHolderAddress(size_t placeHolder);
+        void fillPlaceHolderAddress(size_t placeHolder, size_t address);
+        size_t getVariableAddress();
+        size_t getInstructionAddress();
+        void genAddOne(Kind k);
+        void genSubOne(Kind k);
 
     private:
         string outFileName;
@@ -34,7 +63,8 @@ class Synthesizer {
              *instructionBuffer,
              *instructionPtr;
         size_t headerSize,
-               instructionSize;
+               instructionSize,
+               variableAddress;
 
 };
 

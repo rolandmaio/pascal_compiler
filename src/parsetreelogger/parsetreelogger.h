@@ -31,7 +31,7 @@ class ParseTreeLogger {
         string logFileName;
         string sourceProgramFile;
         int indent;
-        vector<string> openTagsStack;
+        vector<string> *openTagsStack;
 
         void openFile();
         void closeFile();

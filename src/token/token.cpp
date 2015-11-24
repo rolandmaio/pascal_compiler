@@ -2,6 +2,7 @@
 using std::vector;
 #include<utility>
 using std::pair;
+using std::make_pair;
 #include<string>
 using std::string;
 #include "token.h"
@@ -44,7 +45,7 @@ vector<pair<string, Token> > defaultTokens = {
     make_pair<string, Token>("file", Token(PFILE)),
     make_pair<string, Token>("for", Token(FOR)),
     make_pair<string, Token>("function", Token(FUNCTION)),
-    make_pair<string, Token>("goto", Token(GOTO)),
+    make_pair<string, Token>("goto", Token(TK_GOTO)),
     make_pair<string, Token>("if", Token(IF)),
     make_pair<string, Token>("in", Token(IN)),
     make_pair<string, Token>("label", Token(LABEL)),
@@ -66,6 +67,9 @@ vector<pair<string, Token> > defaultTokens = {
     make_pair<string, Token>("var", Token(VAR)),
     make_pair<string, Token>("while", Token(WHILE)),
     make_pair<string, Token>("with", Token(WITH)),
+
+    make_pair<string, Token>("true", Token(BOOLEAN, 1)),
+    make_pair<string, Token>("false", Token(BOOLEAN, 0)),
 
     make_pair<string, Token>("write", Token(TK_A_PROC, "write")),
     make_pair<string, Token>("writeln", Token(TK_A_PROC, "writeln")),
