@@ -16,6 +16,7 @@ using std::string;
 #include "../parsetreelogger/parsetreelogger.h"
 #include "../type/type.h"
 #include "../type/kind.h"
+#include "../type/subrangetype.h"
 #include "../synthesizer/synthesizer.h"
 
 class Parser{
@@ -45,7 +46,7 @@ class Parser{
         void actual_parameter_list();
         void adding_operator();
         void apostrophe_image();
-        void array_type();
+        Type array_type();
         void array_variable();
         void assignment_statement();
         void base_type();
@@ -59,8 +60,8 @@ class Parser{
         void case_list_element();
         void case_statement();
         Type character_string();
-        void component_type();
-        void component_variable();
+        Type component_type();
+        Type component_variable();
         void compound_statement();
         void conditional_statement();
         void conformant_array_parameter_specification();
@@ -105,21 +106,21 @@ class Parser{
         string identifier();
         vector<string> identifier_list();
         void if_statement();
-        void index_expression();
-        void index_type();
+        Type index_expression();
+        Type index_type();
         void index_type_specification();
-        void indexed_variable();
+        Type indexed_variable();
         Type initial_value();
         string label();
         void label_declaration_part();
         void letter();
         void member_designator();
         void multiplying_operator();
-        void new_ordinal_type();
+        Type new_ordinal_type();
         void new_pointer_type();
-        void new_structured_type();
-        void new_type();
-        void ordinal_type();
+        Type new_structured_type();
+        Type new_type();
+        Type ordinal_type();
         void ordinal_type_identifier();
         void packed_conformant_array_schema();
         void pointer_type();
@@ -166,7 +167,7 @@ class Parser{
         void structured_statement();
         void structured_type();
         void structured_type_identifier();
-        void subrange_type();
+        Type subrange_type();
         void tag_field();
         void tag_type();
         Type term();

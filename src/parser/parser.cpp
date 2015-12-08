@@ -29,8 +29,8 @@ bool Parser::parse(){
     parseTreeLogger->logEntry("parse");
     try{
         program();
-        match(END_OF_FILE);
         fillGotoPlaceHolders();
+        match(END_OF_FILE);
     } catch (...){
         cout << "caught exception." << endl;
         parseTreeLogger->logExit("parse");
@@ -89,10 +89,25 @@ void Parser::apostrophe_image(){
     parseTreeLogger->logExit("apostrophe_image");
 }
 
-void Parser::array_type(){
+Type Parser::array_type(){
+    Type index_t, elem_t;
     parseTreeLogger->logEntry("array_type");
-    throw NotImplementedError("array_type");
+    match(ARRAY);
+    match(LBRACKET);
+    index_t = index_type();
+    /* Let's just ignore this for now.
+    while(curtoken.getTag() == COMMA){
+        match(COMMA);
+        index_type();
+    }
+    */
+    match(RBRACKET);
+    match(OF);
+    elem_t = component_type();
+    index_t.setElemKind(elem_t.getKind());
+    index_t.setKind(ARRAY_K);
     parseTreeLogger->logExit("array_type");
+    return index_t;
 }
 
 void Parser::array_variable(){
@@ -104,11 +119,18 @@ void Parser::array_variable(){
 void Parser::assignment_statement(){
     parseTreeLogger->logEntry("assignment_statement");
     Type lhs(curtoken.getKind());
-    if(curtoken.getTag() == TK_A_FUNC){
-        function_identifier();
-    } else {
-        synthesizer->genOpCode(PUSH_ADDRESS);
-        variable_access();
+    switch(curtoken.getTag()){
+        case TK_A_FUNC:
+            function_identifier();
+            break;
+        case TK_A_ARRAY:
+            lhs = Type(curtoken.getElemKind());
+            variable_access();
+            break;
+        default:
+            synthesizer->genOpCode(PUSH_ADDRESS);
+            variable_access();
+            break;
     }
     match(ASSIGN);
     Type rhs = expression();
@@ -198,7 +220,14 @@ void Parser::case_list_element(){
 
 void Parser::case_statement(){
     parseTreeLogger->logEntry("case_statement");
-    throw NotImplementedError("case_statement");
+    match(CASE);
+    Type t = expression();
+    if(t.getKind() != INTEGER_K && t.getKind() != BOOLEAN_K){
+        throw "Ordinal type required for case statement control variable!";
+    }
+    match(OF);
+    while(curtoken.getTag() == INT || curtoken.getTag() == BOOLEAN){
+    }
     parseTreeLogger->logExit("case_statement");
 }
 
@@ -213,16 +242,27 @@ Type Parser::character_string(){
     return Type(STRING_K);
 }
 
-void Parser::component_type(){
+Type Parser::component_type(){
+    Type t;
     parseTreeLogger->logEntry("component_type");
-    throw NotImplementedError("component_type");
+    t = type_denoter();
     parseTreeLogger->logExit("component_type");
+    return t;
 }
 
-void Parser::component_variable(){
+Type Parser::component_variable(){
     parseTreeLogger->logEntry("component_variable");
-    throw NotImplementedError("component_variable");
+    Type t;
+    switch(curtoken.getTag()){
+        case TK_A_ARRAY:
+            t = indexed_variable();
+            break;
+        default:
+            throw "component_variable not implemented for this tag.";
+            break;
+    }
     parseTreeLogger->logExit("component_variable");
+    return t;
 }
 
 void Parser::compound_statement(){
@@ -395,6 +435,8 @@ Type Parser::factor(){
     parseTreeLogger->logEntry("factor");
     Type t;
     switch(curtoken.getTag()){
+        case RPAREN:
+            break;
         case INT:
         case REAL:
         case STRING:
@@ -415,6 +457,10 @@ Type Parser::factor(){
         case NOT:
             match(NOT);
             t = factor();
+            break;
+        case TK_A_ARRAY:
+            t = variable_access();
+            synthesizer->genPushVarBackwardsOpcode(t.getKind());
             break;
         default:
             synthesizer->genPushVarOpcode(curtoken.getKind());
@@ -637,7 +683,9 @@ void Parser::goto_statement(){
     }
     synthesizer->genOpCode(JUMP);
     size_t placeHolder = synthesizer->makePlaceHolderAddress();
-    curtoken.addGoto(Goto(placeHolder));
+    Token& tok = (*symboltable)[curtoken.getLexeme()];
+    tok.addGoto(Goto(placeHolder));
+    /*
     symboltable->erase(curtoken.getLexeme());
     symboltable->insert(
         make_pair<string, Token>(
@@ -645,6 +693,7 @@ void Parser::goto_statement(){
             Token(curtoken)
         )
     );
+    */
     match(TK_A_LABEL);
     parseTreeLogger->logExit("goto_statement");
 }
@@ -696,16 +745,19 @@ void Parser::if_statement(){
     parseTreeLogger->logExit("if_statement");
 }
 
-void Parser::index_expression(){
+Type Parser::index_expression(){
     parseTreeLogger->logEntry("index_expression");
-    throw NotImplementedError("index_expression");
+    Type t = expression();
     parseTreeLogger->logExit("index_expression");
+    return t;
 }
 
-void Parser::index_type(){
+Type Parser::index_type(){
+    Type t;
     parseTreeLogger->logEntry("index_type");
-    throw NotImplementedError("index_type");
+    t = ordinal_type();
     parseTreeLogger->logExit("index_type");
+    return t;
 }
 
 void Parser::index_type_specification(){
@@ -714,10 +766,33 @@ void Parser::index_type_specification(){
     parseTreeLogger->logExit("index_type_specification");
 }
 
-void Parser::indexed_variable(){
+Type Parser::indexed_variable(){
     parseTreeLogger->logEntry("indexed_variable");
-    throw NotImplementedError("indexed_variable");
+    Token& array_info = curtoken;
+    match(TK_A_ARRAY);
+    match(LBRACKET);
+    Type index_t = index_expression();
+    synthesizer->genOpCode(PUSH_ARRAY_ADDRESS);
+    if(index_t.getKind() != array_info.getIndexKind()){
+        throw "Type of index expression does not match array index type.";
+    }
+    synthesizer->writeKind(index_t.getKind());
+    switch(array_info.getIndexKind()){
+        case INTEGER_K:
+            // Write lower bound as a size_t to instruction byte code.
+            synthesizer->writeToInstructions((size_t)array_info.getIntLow());
+            // Calculate offset from array address.
+            synthesizer->writeToInstructions((size_t)sizeof(int));
+            // Write address of array to instruction byte code.
+            synthesizer->genAddress(array_info.getAddress());
+            break;
+        default:
+            throw "indexed_variable not implemented for this index type.";
+            break;
+    }
+    match(RBRACKET);
     parseTreeLogger->logExit("indexed_variable");
+    return Type(array_info.getElemKind());
 }
 
 Type Parser::initial_value(){
@@ -784,10 +859,19 @@ void Parser::multiplying_operator(){
     parseTreeLogger->logExit("multiplying_operator");
 }
 
-void Parser::new_ordinal_type(){
+Type Parser::new_ordinal_type(){
+    Type t;
     parseTreeLogger->logEntry("new_ordinal_type");
-    throw NotImplementedError("new_ordinal_type");
+    switch(curtoken.getTag()){
+        case LPAREN:
+            enumerated_type();
+            break;
+        default:
+            t = subrange_type();
+            break;
+    }
     parseTreeLogger->logExit("new_ordinal_type");
+    return t;
 }
 
 void Parser::new_pointer_type(){
@@ -796,22 +880,63 @@ void Parser::new_pointer_type(){
     parseTreeLogger->logExit("new_pointer_type");
 }
 
-void Parser::new_structured_type(){
+Type Parser::new_structured_type(){
     parseTreeLogger->logEntry("new_structured_type");
-    throw NotImplementedError("new_structured_type");
+    Type t;
+    switch(curtoken.getTag()){
+        case ARRAY:
+            t = array_type();
+            break;
+        case RECORD:
+            record_type();
+            break;
+        case SET:
+            set_type();
+            break;
+        case PFILE:
+            file_type();
+            break;
+        default:
+            throw "Danger in new_structured_type Will Robinson!";
+    }
     parseTreeLogger->logExit("new_structured_type");
+    return t;
 }
 
-void Parser::new_type(){
+Type Parser::new_type(){
     parseTreeLogger->logEntry("new_type");
-    throw NotImplementedError("new_type");
+    Type t;
+    switch(curtoken.getTag()){
+        case EXP:
+            new_pointer_type();
+            break;
+        case ARRAY:
+        case RECORD:
+        case SET:
+        case PFILE:
+            t = new_structured_type();
+            break;
+        default:
+            new_ordinal_type();
+            break;
+    }
     parseTreeLogger->logExit("new_type");
+    return t;
 }
 
-void Parser::ordinal_type(){
+Type Parser::ordinal_type(){
+    Type t;
     parseTreeLogger->logEntry("ordinal_type");
-    throw NotImplementedError("ordinal_type");
+    switch(curtoken.getTag()){
+        case ID:
+            ordinal_type_identifier();
+            break;
+        default:
+            t = new_ordinal_type();
+            break;
+    }
     parseTreeLogger->logExit("ordinal_type");
+    return t;
 }
 
 void Parser::ordinal_type_identifier(){
@@ -989,7 +1114,13 @@ void Parser::relational_operator(){
 
 void Parser::repeat_statement(){
     parseTreeLogger->logEntry("repeat_statement");
-    throw NotImplementedError("repeat_statement");
+    match(REPEAT);
+    size_t condAddress = synthesizer->getInstructionAddress();
+    statement_sequence();
+    match(UNTIL);
+    Boolean_expression();
+    synthesizer->genOpCode(JUMP_FALSE);
+    synthesizer->genAddress(condAddress);
     parseTreeLogger->logExit("repeat_statement");
 }
 
@@ -1154,8 +1285,9 @@ void Parser::statement(){
         if(curtoken.getSeen()){
             throw "Syntax error discovered in statement";
         }
-        curtoken.setSeen(true);
-        curtoken.setAddress(synthesizer->getInstructionAddress());
+        Token& tok = (*symboltable)[curtoken.getLexeme()];
+        tok.setSeen(true);
+        tok.setAddress(synthesizer->getInstructionAddress());
         match(TK_A_LABEL);
         match(COLON);
     }
@@ -1239,10 +1371,31 @@ void Parser::structured_type_identifier(){
     parseTreeLogger->logExit("structured_type_identifier");
 }
 
-void Parser::subrange_type(){
+Type Parser::subrange_type(){
+    Type t, s;
     parseTreeLogger->logEntry("subrange_type");
-    throw NotImplementedError("subrange_type");
+    if(curtoken.getTag() != BOOLEAN &&
+       curtoken.getTag() != INT){
+        throw "Subrange type must be of ordinal type.";
+    }
+    Token low = curtoken;
+    match(curtoken.getTag());
+    match(RANGE);
+    Token high = curtoken;
+    if(low.getTag() != high.getTag()){
+        throw "Subrange low and high values must be of same type.";
+    }
+    switch(curtoken.getTag()){
+        case INT:
+            t = Type(INTEGER_K);
+            s = Type(SUBRANGE_K, INTEGER_K, low.getValue(), high.getValue());
+            break;
+        default:
+            throw "Invalid subrange type!";
+    }
+    match(curtoken.getTag());
     parseTreeLogger->logExit("subrange_type");
+    return s;
 }
 
 void Parser::tag_field(){
@@ -1348,15 +1501,15 @@ void Parser::type_definition_part(){
 }
 
 Type Parser::type_denoter(){
-    string typ;
+    Type t;
     parseTreeLogger->logEntry("type_denoter");
     if(curtoken.getTag() == ID){
-        typ = type_identifier();
+        t = Type(type_identifier());
     } else {
-        new_type();
+        t = new_type();
     }
     parseTreeLogger->logExit("type_denoter");
-    return Type(typ);
+    return t;
 }
 
 string Parser::type_identifier(){
@@ -1461,6 +1614,9 @@ Type Parser::variable_access(){
         case TK_A_VAR:
             t = entire_variable();
             break;
+        case TK_A_ARRAY:
+            t = component_variable();
+            break;
         default:
             throw NotImplementedError("variable_access on non TK_A_VAR variable");
     }
@@ -1549,6 +1705,25 @@ void Parser::variable_declaration(){
                 );
             }
             break;
+        case ARRAY_K:
+            for(int i = 0; i < list.size(); ++i){
+                symboltable->erase(list[i].c_str());
+                symboltable->insert(
+                    make_pair<string, Token>(
+                        list[i].c_str(),
+                        Token(
+                            TK_A_ARRAY,
+                            list[i].c_str(),
+                            t.getElemKind(),
+                            t.getIndexKind(),
+                            t.getIntLow(),
+                            t.getIntHigh(),
+                            synthesizer->allocateArrayVariableInHeader(t)
+                        )
+                    )
+                );
+            }
+            break;
         default:
             cout << "We should not be here..." << endl;
             throw "Variable declarations for this type is not implemented.";
@@ -1627,7 +1802,16 @@ void Parser::variant_selector(){
 
 void Parser::while_statement(){
     parseTreeLogger->logEntry("while_statement");
-    throw NotImplementedError("while_statement");
+    match(WHILE);
+    size_t condAddress = synthesizer->getInstructionAddress();
+    Boolean_expression();
+    synthesizer->genOpCode(JUMP_FALSE);
+    size_t placeHolder = synthesizer->makePlaceHolderAddress();
+    match(DO);
+    statement();
+    synthesizer->genOpCode(JUMP);
+    synthesizer->genAddress(condAddress);
+    synthesizer->fillPlaceHolderAddress(placeHolder);
     parseTreeLogger->logExit("while_statement");
 }
 
