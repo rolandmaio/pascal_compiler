@@ -24,12 +24,19 @@ class Token {
         Token(Tag t, float v) : tag(t), realValue(v) {}
         Token(Tag t, string l, Kind k, size_t a)
             : tag(t), lexeme(l), kind(k), address(a) {}
+        Token(Tag t, string l, Kind elem_k, Kind index_k, int low, int high, size_t addr)
+            : tag(t), lexeme(l), elem_k(elem_k), index_k(index_k),
+              int_low(low), int_high(high), address(addr) { kind = ARRAY_K; }
         Tag getTag(){ return tag; }
         string getLexeme(){ return lexeme; }
         string getPrevLab(){ return prevLab; }
         int getValue(){ return value; }
+        int getIntLow(){ return int_low; }
+        int getIntHigh(){ return int_high; }
         float getRealValue(){ return realValue; }
         Kind getKind(){ return kind; }
+        Kind getIndexKind(){ return index_k; }
+        Kind getElemKind(){ return elem_k; }
         size_t getAddress(){ return address; }
         void setAddress(size_t addr){ address = addr; }
         void addGoto(Goto g){ listOfGotos.push_back(g); }
@@ -40,8 +47,8 @@ class Token {
     private:
         Tag tag;
         string lexeme, str_val, prevLab;
-        Kind kind;
-        int value;
+        Kind kind, index_k, elem_k;
+        int value, int_low, int_high;
         float realValue;
         size_t address;
         list<Goto> listOfGotos;

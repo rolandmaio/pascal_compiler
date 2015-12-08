@@ -23,8 +23,7 @@ vector<pair<string, Token> > defaultTokens = {
     make_pair<string, Token>(",", Token(COMMA)),
     make_pair<string, Token>(":", Token(COLON)),
     make_pair<string, Token>(";", Token(SEMICOLON)),
-    // Ignore this one for now.
-    // make_pair<string, Token>("<UP ARROW>", Token(SEMICOLON)),
+    make_pair<string, Token>("^", Token(EXP)),
     make_pair<string, Token>("(", Token(LPAREN)),
     make_pair<string, Token>(")", Token(RPAREN)),
     make_pair<string, Token>("<>", Token(NEQ)),
