@@ -8,6 +8,8 @@ enum Kind{
     STRING_K,
     REAL_K,
     NIL_K,
+    SUBRANGE_K,
+    ARRAY_K,
     UNDEFINED_K
 
 };
