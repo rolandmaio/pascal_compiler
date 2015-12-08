@@ -17,4 +17,11 @@ Type::Type(string kindName){
     }
 }
 
+Type::Type(Kind k, Kind index_k, int low, int high){
+    kind = k;
+    index_kind = index_k;
+    int_low = low;
+    int_high = high;
+}
+
 #endif
