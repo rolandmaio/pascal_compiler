@@ -12,6 +12,7 @@ using std::string;
 #include "../token/stringtoken.h"
 #include "../token/integertoken.h"
 #include "../opcode/opcode.h"
+#include "../type/kind.h"
 
 class Synthesizer {
 
@@ -22,15 +23,19 @@ class Synthesizer {
         void writeToFile();
         void genOpCode(Opcode opcode);
         void genPushVarOpcode(Kind k);
+        void genPushVarBackwardsOpcode(Kind k);
         void genPopVarOpcode(Kind k);
         void genAddress(size_t addr);
         void genBoolean(bool val);
         void writeFile();
+        void writeToInstructions(size_t s);
+        void writeKind(Kind k);
         size_t writeStringLiteralToHeader(StringToken strtok);
         size_t allocateStringVariableInHeader();
         size_t allocatIntegerVariableInHeader();
         size_t allocateRealVariableInHeader();
         size_t allocateBooleanVariableInHeader();
+        size_t allocateArrayVariableInHeader(Type t);
         size_t writeUnsignedIntegerLiteralToHeader(Token tok);
         size_t writeUnsignedRealLiteralToHeader(Token tok);
         Type genAdditionCode(Type t1, Type t2);

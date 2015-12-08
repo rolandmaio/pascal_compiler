@@ -79,6 +79,22 @@ size_t Synthesizer::allocateBooleanVariableInHeader(){
     return addr;
 }
 
+size_t Synthesizer::allocateArrayVariableInHeader(Type t){
+    size_t addr = headerSize,
+           size;
+    switch(t.getElemKind()){
+        case INTEGER_K:
+            size = sizeof(int) * (t.getIntHigh() - t.getIntLow() + 1);
+            break;
+        default:
+            throw "Array variable element type not implemented.";
+            break;
+    }
+    headerPtr = headerPtr + size;
+    headerSize += size;
+    return addr;
+}
+
 size_t Synthesizer::writeUnsignedIntegerLiteralToHeader(Token tok){
     size_t addr = headerSize;
     unsigned int value = tok.getValue();
@@ -96,6 +112,16 @@ size_t Synthesizer::writeUnsignedRealLiteralToHeader(Token tok){
     headerPtr = headerPtr + sizeof(float);
     headerSize += sizeof(float);
     return addr;
+}
+
+void Synthesizer::writeKind(Kind k){
+    memcpy(instructionPtr, (void*)&k, sizeof(Kind));
+    instructionPtr = instructionPtr + sizeof(Kind);
+    instructionSize = instructionSize + sizeof(Kind);
+}
+
+void Synthesizer::writeToInstructions(size_t s){
+    genAddress(s);
 }
 
 void Synthesizer::genAddress(size_t addr){
@@ -303,8 +329,20 @@ void Synthesizer::genPushVarOpcode(Kind k){
         case BOOLEAN_K:
             genOpCode(PUSH_BOOLEAN_VAR);
             break;
+        case ARRAY_K:
+            genOpCode(PUSH_ARRAY_VAR);
+            break;
         default:
             throw "Push Var Opcode not implemented for this kind";
+    }
+}
+void Synthesizer::genPushVarBackwardsOpcode(Kind k){
+    switch(k){
+        case INTEGER_K:
+            genOpCode(PUSH_INT_BACKWARDS);
+            break;
+        default:
+            throw "Push Var Backwards Opcode not implemented for this kind";
     }
 }
 
