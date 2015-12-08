@@ -150,7 +150,7 @@ void Lexer::stripComments(CommentType commentType){
 
 Token Lexer::getToken(){
 
-    cout << "Enterintg Lexer::getToken()" << endl;
+    cout << "Entering Lexer::getToken()" << endl;
     if(!stack.empty()){
         cout << "The Lexer's stack is nonempty; returning top element" << endl;
         Token tok = stack.back();
@@ -221,7 +221,7 @@ Token Lexer::getToken(){
             value = value*10 + (*scanp - '0');
             advanceScanp();
         } while(isdigit(*scanp));
-        if(*scanp != '.'){
+        if(*scanp != '.' || (*scanp == '.' && *(scanp + 1) == '.')){
             cout << "lexer value: " << value << endl;
             Token tok(INT, value);
             cout << "tok.getValue(): " << tok.getValue() << endl;
