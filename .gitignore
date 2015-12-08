@@ -1,0 +1,6 @@
+*\.exe
+\.~lock*
+compiler_unit_test.pas
+java_workspace/
+logs/
+unit_test_output
