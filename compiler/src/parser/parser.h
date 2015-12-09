@@ -28,13 +28,16 @@ class Parser{
             Lexer *lexer,
             Synthesizer *synthesizer,
             ParseTreeLogger *parseTreeLogger,
-            unordered_map<string, Token> *symboltable
+            unordered_map<string, Token> *base_symboltable
         );
+        Token lookupLexeme(const char* lexeme, Token tk);
 
     private:
         Lexer *lexer;
         unordered_map<string, Token> *symboltable;
         Token curtoken;
+        bool isProcVar;
+        int level;
         ParseTreeLogger *parseTreeLogger;
         Synthesizer *synthesizer;
         string headLabel;

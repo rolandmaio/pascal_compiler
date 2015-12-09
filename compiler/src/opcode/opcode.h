@@ -20,6 +20,7 @@ enum Opcode{
 
     PUSH_STRING_VAR,
     PUSH_BOOLEAN_VAR,
+    PUSH_ARRAY_VAR,
 
     POP_STRING,
     POP_INTEGER,

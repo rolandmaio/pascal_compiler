@@ -43,6 +43,7 @@ vector<pair<string, Token> > defaultTokens = {
     make_pair<string, Token>("end", Token(END)),
     make_pair<string, Token>("file", Token(PFILE)),
     make_pair<string, Token>("for", Token(FOR)),
+    make_pair<string, Token>("forward", Token(FORWARD)),
     make_pair<string, Token>("function", Token(FUNCTION)),
     make_pair<string, Token>("goto", Token(TK_GOTO)),
     make_pair<string, Token>("if", Token(IF)),

@@ -1,5 +1,7 @@
 Program ProcedureProgram;
 
+Var i : Integer;
+
 Procedure IncrementPassByValue(x : Integer);
 Begin
   writeln('Entering Procedure IncrementPassByValue');
@@ -18,7 +20,6 @@ Begin
   writeln('Exiting Procedure IncrementPassByReference');
 End;
 
-Var i : Integer;
 
 Begin
   writeln('Executing ProcedureProgram.');

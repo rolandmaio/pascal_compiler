@@ -204,6 +204,9 @@ Token Lexer::getToken(){
 
         }
         curname[i] = '\0';
+        return parser->lookupLexeme(curname, Token(ID, string(curname)));
+
+        /*
         string lexeme(curname);
         if(!symboltable->count(lexeme)){
             symboltable->insert(
@@ -211,6 +214,7 @@ Token Lexer::getToken(){
             );
         }
         return (*symboltable)[lexeme];
+        */
     }
 
     // Process literal numeric values.

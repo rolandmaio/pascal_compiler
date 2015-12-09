@@ -19,10 +19,18 @@ Parser::Parser(
     unordered_map<string, Token> *symboltable
 ){
     this->lexer = lexer;
+    this->lexer->setParser(this);
     this->synthesizer = synthesizer;
     this->parseTreeLogger = parseTreeLogger;
     this->symboltable = symboltable;
     curtoken = lexer->getToken();
+    this->isProcVar = false;
+    this->level = 0;
+}
+
+Token Parser::lookupLexeme(const char* lexeme, tk){
+
+
 }
 
 bool Parser::parse(){
@@ -988,7 +996,18 @@ void Parser::procedure_block(){
 
 void Parser::procedure_declaration(){
     parseTreeLogger->logEntry("procedure_declaration");
-    throw NotImplementedError("procedure_declaration");
+    match(PROCEDURE);
+    if(curtoken.getTag() == ID){
+        procedure_heading();
+    } else {
+        procedure_identification();
+    }
+    match(SEMICOLON);
+    if(curtoken.getTag() == FORWARD){
+        directive();
+    } else {
+        procedure_block();
+    }
     parseTreeLogger->logExit("procedure_declaration");
 }
 
