@@ -25,6 +25,7 @@ using std::endl;
 #include "../token/integertoken.h"
 #include "../token/stringtoken.h"
 #include "../token/realtoken.h"
+#include "../parser/parser.h"
 
 #define ENDOFFILE 127
 
@@ -45,6 +46,10 @@ Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
     //scanp = program.c_str();
     cout << "Source program: " << program << endl;
 
+}
+
+void Lexer::setParser(Parser* parser){
+    this->parser = parser;
 }
 
 void Lexer::addToStack(Token tok){
@@ -204,9 +209,9 @@ Token Lexer::getToken(){
 
         }
         curname[i] = '\0';
-        return parser->lookupLexeme(curname, Token(ID, string(curname)));
+        parser->setSymbolTable(curname);
+        //return parser->lookupLexeme(curname, Token(ID, string(curname)));
 
-        /*
         string lexeme(curname);
         if(!symboltable->count(lexeme)){
             symboltable->insert(
@@ -214,7 +219,6 @@ Token Lexer::getToken(){
             );
         }
         return (*symboltable)[lexeme];
-        */
     }
 
     // Process literal numeric values.
@@ -262,6 +266,7 @@ Token Lexer::getToken(){
         }
     }
 
+    parser->setSymbolTable("+");
     char anchor = *scanp;
     advanceScanp();
     // Process operators.

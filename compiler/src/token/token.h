@@ -9,6 +9,8 @@ using std::vector;
 using std::pair;
 #include<list>
 using std::list;
+#include<unordered_map>
+using std::unordered_map;
 #include "tag.h"
 #include "../type/kind.h"
 #include "../goto/goto.h"
@@ -19,6 +21,8 @@ class Token {
         Token() : tag(BAD) {}
         Token(Tag t) : tag(t) {}
         Token(Tag t, string l) : tag(t), lexeme(l) {}
+        Token(Tag t, string l, unordered_map<string, Token>* symbol_table)
+            : tag(t), lexeme(l), local_symbol_table(symbol_table) {}
         Token(Tag t, string l, string p) : tag(t), lexeme(l), prevLab(p), seen(false) {}
         Token(Tag t, int v) : tag(t), value(v) {}
         Token(Tag t, float v) : tag(t), realValue(v) {}
@@ -43,6 +47,7 @@ class Token {
         bool getSeen(){ return seen; }
         void setSeen(bool b){ seen = b; }
         list<Goto> getListOfGotos(){ return listOfGotos; }
+        unordered_map<string, Token> *getLocalSymbolTable(){ return local_symbol_table; }
 
     private:
         Tag tag;
@@ -52,6 +57,8 @@ class Token {
         float realValue;
         size_t address;
         list<Goto> listOfGotos;
+        list<size_t> listOfCalls;
+        unordered_map<string, Token> *local_symbol_table;
         bool seen;
 
 };

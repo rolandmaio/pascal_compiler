@@ -1,6 +1,8 @@
 #ifndef PARSER
 #define PARSER
 
+#include<list>
+using std::list;
 #include<unordered_map>
 using std::unordered_map;
 #include<vector>
@@ -18,6 +20,7 @@ using std::string;
 #include "../type/kind.h"
 #include "../type/subrangetype.h"
 #include "../synthesizer/synthesizer.h"
+#include "../symboltablemanager/symboltablemanager.h"
 
 class Parser{
 
@@ -28,12 +31,14 @@ class Parser{
             Lexer *lexer,
             Synthesizer *synthesizer,
             ParseTreeLogger *parseTreeLogger,
-            unordered_map<string, Token> *base_symboltable
+            unordered_map<string, Token> *symboltable
         );
-        Token lookupLexeme(const char* lexeme, Token tk);
+        void setSymbolTable(const char* lexeme);
+        void chainSymbolTable(unordered_map<string, Token>* newSymbolTable);
 
     private:
         Lexer *lexer;
+        list<unordered_map<string, Token>*> symboltables;
         unordered_map<string, Token> *symboltable;
         Token curtoken;
         bool isProcVar;
@@ -41,6 +46,7 @@ class Parser{
         ParseTreeLogger *parseTreeLogger;
         Synthesizer *synthesizer;
         string headLabel;
+        SymbolTableManager symboltablemanager;
 
         void match(Tag t);
         void fillGotoPlaceHolders();

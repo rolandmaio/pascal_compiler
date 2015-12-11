@@ -22,14 +22,31 @@ Parser::Parser(
     this->lexer->setParser(this);
     this->synthesizer = synthesizer;
     this->parseTreeLogger = parseTreeLogger;
-    this->symboltable = symboltable;
+    this->symboltables.push_front(symboltable);
     curtoken = lexer->getToken();
     this->isProcVar = false;
     this->level = 0;
 }
 
-Token Parser::lookupLexeme(const char* lexeme, tk){
+void Parser::setSymbolTable(const char* lexeme){
 
+    level = -1;
+    list<unordered_map<string, Token>*>::iterator it;
+    for(it = symboltables.begin(); it != symboltables.end(); ++it){
+        ++level;
+        if((*it)->count(lexeme)){
+            isProcVar = (level + 1) != symboltables.size();
+            symboltable = (*it);
+            return;
+        }
+    }
+
+}
+
+void Parser::chainSymbolTable(unordered_map<string, Token>* newSymbolTable){
+
+    symboltables.push_front(newSymbolTable);
+    symboltable = newSymbolTable;
 
 }
 
@@ -51,6 +68,7 @@ void Parser::fillGotoPlaceHolders(){
     Token curtok;
     list<Goto> gotos;
     while(headLabel != ""){
+        setSymbolTable(headLabel.c_str());
         curtok = (*symboltable)[headLabel.c_str()];
         gotos = curtok.getListOfGotos();
         while(!gotos.empty()){
@@ -1013,7 +1031,27 @@ void Parser::procedure_declaration(){
 
 void Parser::procedure_heading(){
     parseTreeLogger->logEntry("procedure_heading");
-    throw NotImplementedError("procedure_heading");
+    symboltable->erase(curtoken.getLexeme());
+    symboltable->insert(
+        make_pair<string, Token>(
+            curtoken.getLexeme(),
+            Token(
+                TK_A_PROC,
+                curtoken.getLexeme(),
+                symboltablemanager.allocateSymbolTable()
+            )
+        )
+    );
+    Token& procedureToken = (*symboltable)[curtoken.getLexeme()];
+    chainSymbolTable(procedureToken.getLocalSymbolTable());
+    match(ID);
+    if(curtoken.getTag() == LPAREN){
+        match(LPAREN);
+        formal_parameter_section();
+        while(curtoken.getTag() == SEMICOLON){
+            formal_parameter_section();
+        }
+    }
     parseTreeLogger->logExit("procedure_heading");
 }
 

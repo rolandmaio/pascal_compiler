@@ -6,7 +6,6 @@ using std::make_pair;
 #include<string>
 using std::string;
 #include "token.h"
-#include "proceduretoken.h"
 
 vector<pair<string, Token> > defaultTokens = {
 

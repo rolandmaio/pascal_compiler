@@ -6,11 +6,13 @@ using std::string;
 #include<unordered_map>
 using std::unordered_map;
 #include "../token/token.h"
-#include "../parser/parser.h"
+//#include "../parser/parser.h"
 #include "commenttype.h"
 
 #define LEXER_EOF 257
 #define MAX_IDLEN 255
+
+class Parser;
 
 class Lexer{
 
@@ -20,7 +22,7 @@ class Lexer{
         Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable);
         Lexer(){}
         ~Lexer(){ delete[] buffer; }
-        void setParser(Parser* parser){ this->parser = parser; }
+        void setParser(Parser* parser);//{ this->parser = parser; }
 
     private:
         // Helper functions.
