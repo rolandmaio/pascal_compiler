@@ -11,6 +11,7 @@ Begin
   writeln('Exiting Procedure IncrementPassByValue');
 End;
 
+{
 Procedure IncrementPassByReference(var x : Integer);
 Begin
   writeln('Entering Procedure IncrementPassByReference');
@@ -19,6 +20,7 @@ Begin
   writeln('Incremented value of x: ', x);
   writeln('Exiting Procedure IncrementPassByReference');
 End;
+}
 
 
 Begin
@@ -29,8 +31,10 @@ Begin
   IncrementPassByValue(i);
   writeln('i after: ', i);
   writeln();
+  {
   writeln('i prior: ', i);
   writeln('Invoking IncrementPassByReference');
   IncrementPassByReference(i);
   writeln('i after: ', i);
+  }
 End.

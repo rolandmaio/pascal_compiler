@@ -24,8 +24,10 @@ class Synthesizer {
         void genOpCode(Opcode opcode);
         void genPushVarOpcode(Kind k);
         void genPushVarBackwardsOpcode(Kind k);
+        void genPushLocalVarOpcode(Kind k);
         void genPopVarOpcode(Kind k);
         void genAddress(size_t addr);
+        void genAddress(int reladdr);
         void genBoolean(bool val);
         void writeFile();
         void writeToInstructions(size_t s);

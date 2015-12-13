@@ -15,7 +15,7 @@ enum Tag{
     GT,         // >
     LBRACKET,   // [
     RBRACKET,   // ]
-    DOT,        // .
+    DOT,        // .                10
     COMMA,      // ,
     COLON,      // :
     SEMICOLON,  // ;
@@ -25,7 +25,7 @@ enum Tag{
     NEQ,        // <>
     LEQ,        // <=
     GEQ,        // >=
-    ASSIGN,     // :=
+    ASSIGN,     // :=               20
     RANGE,      // ..
     // word-symbols, except where otherwise noted, the word-symbol
     // will be the Tag name but lowercased. Note, Pascal itself is case
@@ -38,7 +38,7 @@ enum Tag{
     DIV,
     DO,
     DOWNTO,
-    ELSE,
+    ELSE,       //                  30
     END,
     PFILE,
     FOR,
@@ -48,7 +48,7 @@ enum Tag{
     IF,
     IN,
     LABEL,
-    MOD,
+    MOD,        //                  40
     NIL,
     NOT,
     OF,

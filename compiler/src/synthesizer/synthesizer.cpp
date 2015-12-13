@@ -131,6 +131,12 @@ void Synthesizer::genAddress(size_t addr){
     variableAddress = addr;
 }
 
+void Synthesizer::genAddress(int reladdr){
+    memcpy(instructionPtr, (void*)&reladdr, sizeof(int));
+    instructionPtr = instructionPtr + sizeof(int);
+    instructionSize = instructionSize + sizeof(int);
+}
+
 void Synthesizer::genOpCode(Opcode opcode){
     unsigned char chr = opcode;
     memcpy(instructionPtr, (void*)&chr, 1);
@@ -336,6 +342,18 @@ void Synthesizer::genPushVarOpcode(Kind k){
             throw "Push Var Opcode not implemented for this kind";
     }
 }
+
+void Synthesizer::genPushLocalVarOpcode(Kind k){
+    switch(k){
+        case INTEGER_K:
+            genOpCode(PUSH_LOCAL_INT);
+            break;
+        default:
+            throw "No opcode for this local variable kind";
+            break;
+    }
+}
+
 void Synthesizer::genPushVarBackwardsOpcode(Kind k){
     switch(k){
         case INTEGER_K:

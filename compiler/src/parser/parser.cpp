@@ -23,12 +23,13 @@ Parser::Parser(
     this->synthesizer = synthesizer;
     this->parseTreeLogger = parseTreeLogger;
     this->symboltables.push_front(symboltable);
+    this->symboltable = symboltable;
     curtoken = lexer->getToken();
     this->isProcVar = false;
     this->level = 0;
 }
 
-void Parser::setSymbolTable(const char* lexeme){
+Token& Parser::lookupLexeme(const char* lexeme){
 
     level = -1;
     list<unordered_map<string, Token>*>::iterator it;
@@ -36,10 +37,10 @@ void Parser::setSymbolTable(const char* lexeme){
         ++level;
         if((*it)->count(lexeme)){
             isProcVar = (level + 1) != symboltables.size();
-            symboltable = (*it);
-            return;
+            return (*(*it))[lexeme];
         }
     }
+    return (Token&) badtoken;
 
 }
 
@@ -48,6 +49,10 @@ void Parser::chainSymbolTable(unordered_map<string, Token>* newSymbolTable){
     symboltables.push_front(newSymbolTable);
     symboltable = newSymbolTable;
 
+}
+
+void Parser::popSymbolTable(){
+    symboltables.pop_front();
 }
 
 bool Parser::parse(){
@@ -68,8 +73,8 @@ void Parser::fillGotoPlaceHolders(){
     Token curtok;
     list<Goto> gotos;
     while(headLabel != ""){
-        setSymbolTable(headLabel.c_str());
-        curtok = (*symboltable)[headLabel.c_str()];
+        //curtok = (*symboltable)[headLabel.c_str()];
+        curtok = lookupLexeme(headLabel.c_str());
         gotos = curtok.getListOfGotos();
         while(!gotos.empty()){
             Goto g = gotos.back();
@@ -93,13 +98,36 @@ void Parser::match(Tag t){
 
 void Parser::actual_parameter(){
     parseTreeLogger->logEntry("actual_parameter");
-    throw NotImplementedError("actual_parameter");
+    switch(curtoken.getTag()){
+        case TK_A_VAR:
+            lookupLexeme(curtoken.getLexeme().c_str());
+            if(isProcVar){
+                synthesizer->genPushLocalVarOpcode(curtoken.getKind());
+            } else {
+                synthesizer->genPushVarOpcode(curtoken.getKind());
+            }
+            variable_access();
+            break;
+        case PROCEDURE:
+        case FUNCTION:
+            throw "actual_parameter not implemented for this token";
+            break;
+        default:
+            expression();
+            break;
+    }
     parseTreeLogger->logExit("actual_parameter");
 }
 
 void Parser::actual_parameter_list(){
     parseTreeLogger->logEntry("actual_parameter_list");
-    throw NotImplementedError("actual_parameter_list");
+    match(LPAREN);
+    actual_parameter();
+    while(curtoken.getTag() == COMMA){
+        match(COMMA);
+        actual_parameter();
+    }
+    match(RPAREN);
     parseTreeLogger->logExit("actual_parameter_list");
 }
 
@@ -145,6 +173,8 @@ void Parser::array_variable(){
 void Parser::assignment_statement(){
     parseTreeLogger->logEntry("assignment_statement");
     Type lhs(curtoken.getKind());
+    lookupLexeme(curtoken.getLexeme().c_str());
+    bool isProcVar_l =  isProcVar;
     switch(curtoken.getTag()){
         case TK_A_FUNC:
             function_identifier();
@@ -154,7 +184,9 @@ void Parser::assignment_statement(){
             variable_access();
             break;
         default:
-            synthesizer->genOpCode(PUSH_ADDRESS);
+            synthesizer->genOpCode(
+                isProcVar_l ? PUSH_LOCAL_ADDRESS : PUSH_ADDRESS
+            );
             variable_access();
             break;
     }
@@ -165,16 +197,24 @@ void Parser::assignment_statement(){
     }
     switch(lhs.getKind()){
         case STRING_K:
-            synthesizer->genOpCode(POP_STRING);
+            synthesizer->genOpCode(
+                isProcVar_l ? POP_LOCAL_STRING : POP_STRING
+            );
             break;
         case INTEGER_K:
-            synthesizer->genOpCode(POP_INTEGER);
+            synthesizer->genOpCode(
+                isProcVar_l ? POP_LOCAL_INTEGER : POP_INTEGER
+            );
             break;
         case REAL_K:
-            synthesizer->genOpCode(POP_REAL);
+            synthesizer->genOpCode(
+                isProcVar_l ? POP_LOCAL_REAL : POP_REAL
+            );
             break;
         case BOOLEAN_K:
-            synthesizer->genOpCode(POP_BOOLEAN);
+            synthesizer->genOpCode(
+                isProcVar_l ? POP_LOCAL_BOOLEAN : POP_BOOLEAN
+            );
             break;
         default:
             throw "assignment statement not implemented for this type!";
@@ -489,7 +529,12 @@ Type Parser::factor(){
             synthesizer->genPushVarBackwardsOpcode(t.getKind());
             break;
         default:
-            synthesizer->genPushVarOpcode(curtoken.getKind());
+            lookupLexeme(curtoken.getLexeme().c_str());
+            if(isProcVar){
+                synthesizer->genPushLocalVarOpcode(curtoken.getKind());
+            } else {
+                synthesizer->genPushVarOpcode(curtoken.getKind());
+            }
             t = variable_access();
             break;
     }
@@ -643,13 +688,39 @@ void Parser::for_statement(){
 
 void Parser::formal_parameter_list(){
     parseTreeLogger->logEntry("formal_parameter_list");
-    throw NotImplementedError("formal_parameter_list");
+    match(LPAREN);
+    parameterCounter = 0;
+    formal_parameter_section();
+    while(curtoken.getTag() == SEMICOLON){
+        formal_parameter_section();
+    }
+    unordered_map<string, Token>::iterator it;
+    for(it = symboltable->begin(); it != symboltable->end(); ++it){
+        it->second.setRelAddress(-(parameterCounter - it->second.getRelAddress()));
+    }
+    match(RPAREN);
     parseTreeLogger->logExit("formal_parameter_list");
 }
 
 void Parser::formal_parameter_section(){
     parseTreeLogger->logEntry("formal_parameter_section");
-    throw NotImplementedError("formal_parameter_section");
+    switch(curtoken.getTag()){
+        case ID:
+            value_parameter_specification();
+            break;
+        case VAR:
+            variable_parameter_specification();
+            break;
+        case PROCEDURE:
+            procedural_parameter_specification();
+            break;
+        case FUNCTION:
+            functional_parameter_specification();
+            break;
+        default:
+            throw "formal_parameter_section not defined for this tag";
+            break;
+    }
     parseTreeLogger->logExit("formal_parameter_section");
 }
 
@@ -991,30 +1062,41 @@ void Parser::procedural_parameter_specification(){
 
 void Parser::procedure_and_function_declaration_part(){
     parseTreeLogger->logEntry("procedure_and_function_declaration_part");
-    switch(curtoken.getTag()){
-        case PROCEDURE:
-            procedure_declaration();
-            match(SEMICOLON);
-            break;
-        case FUNCTION:
-            function_declaration();
-            match(SEMICOLON);
-            break;
-        default:
-            break;
+    while(curtoken.getTag() == PROCEDURE || curtoken.getTag() == FUNCTION){
+        switch(curtoken.getTag()){
+            case PROCEDURE:
+                procedure_declaration();
+                match(SEMICOLON);
+                break;
+            case FUNCTION:
+                function_declaration();
+                match(SEMICOLON);
+                break;
+            default:
+                break;
+        }
     }
     parseTreeLogger->logExit("procedure_and_function_declaration_part");
 }
 
 void Parser::procedure_block(){
     parseTreeLogger->logEntry("procedure_block");
-    throw NotImplementedError("procedure_block");
+    localVarCounter = 0;
+    bool nestedFlag = inProcedureBlock;
+    if(!nestedFlag){
+        inProcedureBlock = true;
+    }
+    block();
+    if(!nestedFlag){
+        inProcedureBlock = false;
+    }
     parseTreeLogger->logExit("procedure_block");
 }
 
 void Parser::procedure_declaration(){
     parseTreeLogger->logEntry("procedure_declaration");
     match(PROCEDURE);
+    Token& proc = lookupLexeme(curtoken.getLexeme().c_str());
     if(curtoken.getTag() == ID){
         procedure_heading();
     } else {
@@ -1024,8 +1106,15 @@ void Parser::procedure_declaration(){
     if(curtoken.getTag() == FORWARD){
         directive();
     } else {
+        synthesizer->genOpCode(JUMP);
+        size_t placeHolder = synthesizer->makePlaceHolderAddress();
+        proc.setAddress(synthesizer->getInstructionAddress());
         procedure_block();
+        // Code to pop local variable values into reference parameters here!
+        synthesizer->genOpCode(RETURN);
+        synthesizer->fillPlaceHolderAddress(placeHolder);
     }
+    popSymbolTable();
     parseTreeLogger->logExit("procedure_declaration");
 }
 
@@ -1042,16 +1131,14 @@ void Parser::procedure_heading(){
             )
         )
     );
-    Token& procedureToken = (*symboltable)[curtoken.getLexeme()];
-    chainSymbolTable(procedureToken.getLocalSymbolTable());
+    curProcToken = (*symboltable)[curtoken.getLexeme()];
+    // Token& procedureToken = (*symboltable)[curtoken.getLexeme()];
+    chainSymbolTable(curProcToken.getLocalSymbolTable());
     match(ID);
     if(curtoken.getTag() == LPAREN){
-        match(LPAREN);
-        formal_parameter_section();
-        while(curtoken.getTag() == SEMICOLON){
-            formal_parameter_section();
-        }
+        formal_parameter_list();
     }
+    curProcToken.setNumParams(parameterCounter);
     parseTreeLogger->logExit("procedure_heading");
 }
 
@@ -1061,9 +1148,9 @@ void Parser::procedure_identification(){
     parseTreeLogger->logExit("procedure_identification");
 }
 
-ProcedureToken Parser::procedure_identifier(){
+Token Parser::procedure_identifier(){
     parseTreeLogger->logEntry("procedure_identifier");
-    ProcedureToken result = ProcedureToken(curtoken.getLexeme());
+    Token result = curtoken;
     match(curtoken.getTag());
     parseTreeLogger->logExit("procedure_identifier");
     return result;
@@ -1071,7 +1158,7 @@ ProcedureToken Parser::procedure_identifier(){
 
 void Parser::procedure_statement(){
     parseTreeLogger->logEntry("procedure_statement");
-    ProcedureToken proc = procedure_identifier();
+    Token proc = procedure_identifier();
     cout << "Returning from procedure_identifier()" << endl;
     cout << "proc.getTag(): " << proc.getTag() << " proc.getLexeme(): " << proc.getLexeme() << endl;
     if(proc.getLexeme() == "read"){
@@ -1084,6 +1171,10 @@ void Parser::procedure_statement(){
         writeln_parameter_list();
     } else if(curtoken.getTag() == LPAREN){
         actual_parameter_list();
+        synthesizer->genOpCode(CALL);
+        synthesizer->genAddress(proc.getAddress());
+        synthesizer->genOpCode(POP_STACK_ELEMENTS);
+        synthesizer->genAddress(proc.getNumParams());
     }
     parseTreeLogger->logExit("procedure_statement");
 }
@@ -1660,7 +1751,31 @@ void Parser::value_conformant_array_specification(){
 
 void Parser::value_parameter_specification(){
     parseTreeLogger->logEntry("value_parameter_specification");
-    throw NotImplementedError("value_parameter_specification");
+    vector<string> list = identifier_list();
+    match(COLON);
+    Type t(type_identifier());
+    switch(t.getKind()){
+        case INTEGER_K:
+            for(int i = 0; i < list.size(); ++i){
+                symboltable->erase(list[i].c_str());
+                symboltable->insert(
+                    make_pair<string, Token>(
+                        list[i].c_str(),
+                        Token(
+                            TK_A_VAR,
+                            list[i].c_str(),
+                            INTEGER_K,
+                            parameterCounter++
+                        )
+                    )
+                );
+            curProcToken.addParameter(&(*symboltable)[list[i].c_str()]);
+            }
+            break;
+        default:
+            throw "value_parameter_specification not implemented for this kind";
+            break;
+    }
     parseTreeLogger->logExit("value_parameter_specification");
 }
 
@@ -1813,7 +1928,11 @@ Type Parser::variable_identifier(){
             break;
         case INTEGER_K:
             t = Type(INTEGER_K);
-            synthesizer->genAddress(curtoken.getAddress());
+            if(isProcVar){
+                synthesizer->genAddress(curtoken.getRelAddress());
+            } else {
+                synthesizer->genAddress(curtoken.getAddress());
+            }
             match(TK_A_VAR);
             break;
         case REAL_K:
@@ -1836,6 +1955,32 @@ Type Parser::variable_identifier(){
 void Parser::variable_parameter_specification(){
     parseTreeLogger->logEntry("variable_parameter_specification");
     throw NotImplementedError("variable_parameter_specification");
+    /*
+    vector<string> list = identifier_list();
+    match(COLON);
+    Type t(type_identifier());
+    switch(t.getKind()){
+        case INTEGER_K:
+            for(int i = 0; i < list.size(); ++i){
+                symboltable->erase(list[i].c_str());
+                symboltable->insert(
+                    make_pair<string, Token>(
+                        list[i].c_str(),
+                        Token(
+                            TK_A_VAR,
+                            list[i].c_str(),
+                            INTEGER_K,
+                            parameterCounter++
+                        )
+                    )
+                );
+            }
+            break;
+        default:
+            throw "value_parameter_specification not implemented for this kind";
+            break;
+    }
+    */
     parseTreeLogger->logExit("variable_parameter_specification");
 }
 

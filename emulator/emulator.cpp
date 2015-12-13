@@ -33,7 +33,7 @@ void Emulator::run(){
 }
 
 void Emulator::executeInstruction(){
-    int x, y, *int_ptr;
+    int x, y, *int_ptr, int_addr;
     float fx, fy, *float_ptr;
     char *addr, **char_ptr_ptr;
     bool bu, bv, *bool_ptr;
@@ -55,6 +55,15 @@ void Emulator::executeInstruction(){
             stack_ptr->integer = *((int*) getPointer((stack_ptr - 1)->address));
             ++stack_ptr;
             break;
+        case PUSH_LOCAL_INT:
+            code_ptr = code_ptr + 1;
+            int_addr = readIntAddress();
+            if(int_addr < 0){
+                --int_addr;
+            }
+            stack_ptr->integer = (base_ptr + int_addr)->integer;
+            ++stack_ptr;
+            break;
         case PUSH_REAL:
             code_ptr = code_ptr + 1;
             stack_ptr->real = *((float*) getPointer(readAddress()));
@@ -69,6 +78,15 @@ void Emulator::executeInstruction(){
         case PUSH_ADDRESS:
             code_ptr = code_ptr + 1;
             stack_ptr->address = readAddress();
+            ++stack_ptr;
+            break;
+        case PUSH_LOCAL_ADDRESS:
+            code_ptr = code_ptr + 1;
+            int_addr = readIntAddress();
+            if(int_addr < 0){
+                --int_addr;
+            }
+            stack_ptr->int_address = int_addr;
             ++stack_ptr;
             break;
         case PUSH_ARRAY_ADDRESS:
@@ -264,6 +282,12 @@ void Emulator::executeInstruction(){
             *int_ptr = (stack_ptr - 1)->integer;
             stack_ptr = stack_ptr - 2;
             break;
+        case POP_LOCAL_INTEGER:
+            code_ptr = code_ptr + 1;
+            x = (--stack_ptr)->integer;
+            int_addr = (--stack_ptr)->int_address;
+            (base_ptr + int_addr)->integer = x;
+            break;
         case POP_REAL:
             code_ptr = code_ptr + 1;
             float_ptr = (float*) getPointer((stack_ptr - 2)->address);
@@ -301,6 +325,26 @@ void Emulator::executeInstruction(){
             address = headerSize + readAddress();
             code_ptr = file_data + address;
             break;
+        case CALL:
+            code_ptr = code_ptr + 1;
+            address = headerSize + readAddress();
+            stack_ptr->ret_ptr = code_ptr;
+            ++stack_ptr;
+            stack_ptr->prev_bp = base_ptr;
+            base_ptr = stack_ptr;
+            ++stack_ptr;
+            code_ptr = file_data + address;
+            break;
+        case RETURN:
+            code_ptr = (base_ptr - 1)->ret_ptr;
+            // "Deallocate" local variables on stack.
+            stack_ptr = base_ptr;
+            base_ptr = base_ptr->prev_bp;
+            break;
+        case POP_STACK_ELEMENTS:
+            code_ptr = code_ptr + 1;
+            stack_ptr = stack_ptr - (readIntAddress() + 1);
+            break;
         default:
             cout << "We shouldn't be here. Opcode: " << (Opcode) *code_ptr << endl;
             exit(1);
@@ -321,6 +365,12 @@ void* Emulator::getPointer(size_t address){
 size_t Emulator::readAddress(){
     size_t addr = (*((size_t*) code_ptr));
     code_ptr = code_ptr + sizeof(size_t);
+    return addr;
+}
+
+int Emulator::readIntAddress(){
+    int addr = (*((int*) code_ptr));
+    code_ptr = code_ptr + sizeof(int);
     return addr;
 }
 

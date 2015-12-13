@@ -43,7 +43,6 @@ Lexer::Lexer(const char* sourceFile, unordered_map<string, Token> *symboltable){
     string program((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
     buffer = new char[1<<10];//(char*) malloc(1000);
     scanp = strcpy(buffer, program.c_str());
-    //scanp = program.c_str();
     cout << "Source program: " << program << endl;
 
 }
@@ -55,13 +54,6 @@ void Lexer::setParser(Parser* parser){
 void Lexer::addToStack(Token tok){
     stack.push_back(tok);
 }
-
-/*
-Lexer::~Lexer(){
-    //free(buffer);
-    delete[] buffer;
-}
-*/
 
 void Lexer::advanceScanp(){
 
@@ -209,16 +201,14 @@ Token Lexer::getToken(){
 
         }
         curname[i] = '\0';
-        parser->setSymbolTable(curname);
-        //return parser->lookupLexeme(curname, Token(ID, string(curname)));
-
-        string lexeme(curname);
-        if(!symboltable->count(lexeme)){
+        if((parser->lookupLexeme(curname)).getTag() == BAD){
             symboltable->insert(
-                make_pair<string, Token>(lexeme.c_str(), Token(ID, lexeme))
+                make_pair<string, Token>(curname, Token(ID, curname))
             );
         }
-        return (*symboltable)[lexeme];
+
+        return parser->lookupLexeme(curname);
+
     }
 
     // Process literal numeric values.
@@ -266,7 +256,6 @@ Token Lexer::getToken(){
         }
     }
 
-    parser->setSymbolTable("+");
     char anchor = *scanp;
     advanceScanp();
     // Process operators.

@@ -33,16 +33,18 @@ class Parser{
             ParseTreeLogger *parseTreeLogger,
             unordered_map<string, Token> *symboltable
         );
-        void setSymbolTable(const char* lexeme);
+        Token& lookupLexeme(const char* lexeme);
         void chainSymbolTable(unordered_map<string, Token>* newSymbolTable);
+        void popSymbolTable();
 
     private:
         Lexer *lexer;
         list<unordered_map<string, Token>*> symboltables;
         unordered_map<string, Token> *symboltable;
-        Token curtoken;
-        bool isProcVar;
-        int level;
+        Token curtoken, badtoken, curproctoken;
+        Token& curProcToken = curproctoken;
+        bool isProcVar, inProcedureBlock;
+        int level, parameterCounter, localVarCounter;
         ParseTreeLogger *parseTreeLogger;
         Synthesizer *synthesizer;
         string headLabel;
@@ -139,7 +141,7 @@ class Parser{
         void procedure_declaration();
         void procedure_heading();
         void procedure_identification();
-        ProcedureToken procedure_identifier();
+        Token procedure_identifier();
         void procedure_statement();
         void program();
         void program_block();

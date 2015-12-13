@@ -245,6 +245,12 @@ tests = [('writeln test',
           'Unit test failed on array test',
           'Integration test failed on array test',
           '1 4 9 16 25 36 49 64 81 100 \n'
+      ), ('procedure pass by value no local variables test',
+          "Var i : Integer; Procedure IncrementPassByValue(x : Integer); Begin writeln('Entering Procedure IncrementPassByValue'); writeln('Value of x passed: ', x); x := x + 1; writeln('Incremented value of x: ', x); writeln('Exiting Procedure IncrementPassByValue'); End;",
+          "writeln('Executing ProcedureProgram.'); i := 10; writeln('i prior: ', i); writeln('Invoking IncrementPassByValue'); IncrementPassByValue(i); writeln('i after: ', i); writeln();",
+          'Unit test failed on procedure pass by value no local variables test',
+          'Integration test failed on procedure pass by value no local variables test',
+          'Executing ProcedureProgram.\ni prior: 10\nInvoking IncrementPassByValue\nEntering Procedure IncrementPassByValue\nValue of x passed: 10\nIncremented value of x: 11\nExiting Procedure IncrementPassByValue\ni after: 10\n\n'
       )
 ]
 

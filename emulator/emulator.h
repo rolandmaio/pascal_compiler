@@ -17,12 +17,14 @@ class Emulator{
              *code_ptr,
              *data_ptr;
         StackElement stack[1 << 10], // Ditto.
-                     *stack_ptr = stack;
+                     *stack_ptr = stack,
+                     *base_ptr = NULL;
         size_t headerSize;
 
         void executeInstruction();
         void* getPointer(size_t address);
         size_t readAddress();
+        int readIntAddress();
 
 };
 
