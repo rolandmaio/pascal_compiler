@@ -91,7 +91,19 @@ size_t Synthesizer::allocateArrayVariableInHeader(Type t){
            size;
     switch(t.getElemKind()){
         case Kind::INTEGER:
-            size = sizeof(int) * (t.getIntHigh() - t.getIntLow() + 1);
+            switch(t.getIndexKind()){
+                case Kind::INTEGER:
+                    size = sizeof(int) * (t.getIntHigh() - t.getIntLow() + 1);
+                    break;
+                case Kind::CHAR:
+                    size = sizeof(int) * (t.getCharHigh() - t.getCharLow() + 1);
+                    break;
+                case Kind::BOOLEAN:
+                    size = 2*sizeof(int);
+                    break;
+                default:
+                    throw "Array variable index type not implemented";
+            }
             break;
         default:
             throw "Array variable element type not implemented.";
@@ -125,6 +137,12 @@ void Synthesizer::writeKind(Kind k){
     memcpy(instructionPtr, (void*)&k, sizeof(Kind));
     instructionPtr = instructionPtr + sizeof(Kind);
     instructionSize = instructionSize + sizeof(Kind);
+}
+
+void Synthesizer::writeToInstructions(char c){
+    memcpy(instructionPtr, (void*)&c, sizeof(char));
+    instructionPtr = instructionPtr + sizeof(char);
+    instructionSize = instructionSize + sizeof(char);
 }
 
 void Synthesizer::writeToInstructions(size_t s){

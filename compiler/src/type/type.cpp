@@ -26,4 +26,11 @@ Type::Type(Kind k, Kind index_k, int low, int high){
     int_high = high;
 }
 
+Type::Type(Kind k, Kind index_k, char low, char high){
+    kind = k;
+    index_kind =  index_k;
+    char_low = low;
+    char_high = high;
+}
+
 #endif

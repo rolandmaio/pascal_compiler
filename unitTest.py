@@ -334,6 +334,16 @@ tests = [('writeln test',
           "for a := 'A' to 'F' do Begin Case a of 'A', 'D': writeln('A is for apple or D is for dog!') 'B', 'E': writeln('B is for banana or E is for elephant!') 'C', 'F': writeln('C is for cookie or F is for fox!') End End;",
           'Unit test failed on case statement char constant list test',
           "A is for apple or D is for dog!\nB is for banana or E is for elephant!\nC is for cookie or F is for fox!\nA is for apple or D is for dog!\nB is for banana or E is for elephant!\nC is for cookie or F is for fox!\n"
+      ), ('array with char index test',
+          "Var A: Array['a'..'z'] of Integer; c: Char; i: Integer;",
+          "i := 1; for c := 'a' to 'z' do Begin A[c] := i*i; i := i + 1; End; for c := 'a' to 'z' do Begin write(A[c]); if c < 'z' then write(' '); else writeln; End;",
+          'Unit test failed on array with char index test',
+          '1 4 9 16 25 36 49 64 81 100 121 144 169 196 225 256 289 324 361 400 441 484 529 576 625 676\n'
+      ), ('array with boolean index test',
+          'Var A: Array[Boolean] of Integer; b: Boolean;',
+          "b := False; A[b] := 0; b := True; A[b] := 1; writeln(A[False], ' ', A[True]);",
+          'Unit test failed on array with boolean index test',
+          '0 1\n'
       )
 ]
 

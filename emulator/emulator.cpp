@@ -35,7 +35,7 @@ void Emulator::run(){
 void Emulator::executeInstruction(){
     int x, y, *int_ptr, int_addr;
     float fx, fy, *float_ptr;
-    char *addr, *char_ptr, **char_ptr_ptr, ca, cb;
+    char *addr, *char_ptr, **char_ptr_ptr, ca, cb, char_idx_low, char_idx;
     bool bu, bv, *bool_ptr;
     size_t address, idx, idx_low, elem_size;
     StackElement temp_stackelement;
@@ -100,6 +100,26 @@ void Emulator::executeInstruction(){
                     idx = (size_t)(stack_ptr - 1)->integer;
                     --stack_ptr;
                     stack_ptr->address = address + (idx - idx_low)*elem_size;
+                    ++stack_ptr;
+                    break;
+                case Kind::CHAR:
+                    code_ptr = code_ptr + sizeof(Kind);
+                    char_idx_low = *(char*) code_ptr;
+                    code_ptr = code_ptr + sizeof(char);
+                    elem_size = readAddress();
+                    address = readAddress();
+                    char_idx = (size_t)(stack_ptr - 1)->string_ptr[0];
+                    --stack_ptr;
+                    stack_ptr->address = address + (char_idx - char_idx_low)*elem_size;
+                    ++stack_ptr;
+                    break;
+                case Kind::BOOLEAN:
+                    code_ptr = code_ptr + sizeof(Kind);
+                    elem_size = readAddress();
+                    address = readAddress();
+                    --stack_ptr;
+                    bu = stack_ptr->boolean;
+                    stack_ptr->address = address + (bu ? elem_size : 0);
                     ++stack_ptr;
                     break;
                 default:

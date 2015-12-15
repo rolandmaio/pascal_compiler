@@ -369,6 +369,8 @@ void Parser::case_statement(){
         match(SEMICOLON);
     }
     match(END);
+    synthesizer->genOpCode(POP_STACK_ELEMENTS);
+    synthesizer->genAddress(0);
     parseTreeLogger->logExit("case_statement");
 }
 
@@ -948,7 +950,7 @@ void Parser::index_type_specification(){
 
 Type Parser::indexed_variable(){
     parseTreeLogger->logEntry("indexed_variable");
-    Token& array_info = curtoken;
+    Token& array_info = lookupLexeme(curtoken.getLexeme().c_str());
     match(TK_A_ARRAY);
     match(LBRACKET);
     Type index_t = index_expression();
@@ -961,9 +963,39 @@ Type Parser::indexed_variable(){
         case Kind::INTEGER:
             // Write lower bound as a size_t to instruction byte code.
             synthesizer->writeToInstructions((size_t)array_info.getIntLow());
-            // Calculate offset from array address.
-            synthesizer->writeToInstructions((size_t)sizeof(int));
+            // Write element size to instruction byte code.
+            switch(array_info.getElemKind()){
+                case Kind::INTEGER:
+                    synthesizer->writeToInstructions((size_t)sizeof(int));
+                    break;
+                default:
+                    throw "Array element kind not implemented yet";
+                    break;
+            }
             // Write address of array to instruction byte code.
+            synthesizer->genAddress(array_info.getAddress());
+            break;
+        case Kind::CHAR:
+            synthesizer->writeToInstructions(array_info.getCharLow());
+            switch(array_info.getElemKind()){
+                case Kind::INTEGER:
+                    synthesizer->writeToInstructions((size_t)sizeof(int));
+                    break;
+                default:
+                    throw "Array element kind not implemented yet";
+                    break;
+            }
+            synthesizer->genAddress(array_info.getAddress());
+            break;
+        case Kind::BOOLEAN:
+            switch(array_info.getElemKind()){
+                case Kind::INTEGER:
+                    synthesizer->writeToInstructions((size_t)sizeof(int));
+                    break;
+                default:
+                    throw "Array element kind not implemented yet";
+                    break;
+            }
             synthesizer->genAddress(array_info.getAddress());
             break;
         default:
@@ -1109,7 +1141,7 @@ Type Parser::ordinal_type(){
     parseTreeLogger->logEntry("ordinal_type");
     switch(curtoken.getTag()){
         case ID:
-            ordinal_type_identifier();
+            t = ordinal_type_identifier();
             break;
         default:
             t = new_ordinal_type();
@@ -1119,10 +1151,20 @@ Type Parser::ordinal_type(){
     return t;
 }
 
-void Parser::ordinal_type_identifier(){
+Type Parser::ordinal_type_identifier(){
     parseTreeLogger->logEntry("ordinal_type_identifier");
-    throw NotImplementedError("ordinal_type_identifier");
+    Type t;
+    string id = type_identifier();
+    if(id == "boolean"){
+        t = Type(
+            Kind::ARRAY,
+            Kind::BOOLEAN
+        );
+    } else {
+        t = Type(id);
+    }
     parseTreeLogger->logExit("ordinal_type_identifier");
+    return t;
 }
 
 void Parser::packed_conformant_array_schema(){
@@ -1605,10 +1647,19 @@ void Parser::structured_type_identifier(){
 
 Type Parser::subrange_type(){
     Type t, s;
+    char char_low, char_high;
     parseTreeLogger->logEntry("subrange_type");
-    if(curtoken.getTag() != BOOLEAN &&
-       curtoken.getTag() != INT){
-        throw "Subrange type must be of ordinal type.";
+    switch(curtoken.getTag()){
+        case BOOLEAN:
+        case INT:
+            break;
+        case STRING:
+            if(strlen(curtoken.getLexeme().c_str()) != 1){
+                throw "String cannot be Subrange type";
+            }
+            break;
+        default:
+            throw "Subrange type must be of ordinal type.";
     }
     Token low = curtoken;
     match(curtoken.getTag());
@@ -1617,10 +1668,30 @@ Type Parser::subrange_type(){
     if(low.getTag() != high.getTag()){
         throw "Subrange low and high values must be of same type.";
     }
+    if(low.getTag() == STRING &&
+       strlen(high.getLexeme().c_str()) != 1){
+        throw "Subrange high value cannot be a string.";
+    }
     switch(curtoken.getTag()){
         case INT:
             t = Type(Kind::INTEGER);
+            if(low.getValue() > high.getValue()){
+                throw "The lower bound cannot be greater than the upper bound";
+            }
             s = Type(Kind::SUBRANGE, Kind::INTEGER, low.getValue(), high.getValue());
+            break;
+        case STRING:
+            char_low = (char) low.getLexeme().c_str()[0];
+            char_high = (char) high.getLexeme().c_str()[0];
+            if(char_low > char_high){
+                throw "The lower bound cannot be greater than the upper bound";
+            }
+            s = Type(
+                Kind::SUBRANGE,
+                Kind::CHAR,
+                char_low,
+                char_high
+            );
             break;
         default:
             throw "Invalid subrange type!";
@@ -1746,8 +1817,9 @@ Type Parser::type_denoter(){
 
 string Parser::type_identifier(){
     parseTreeLogger->logEntry("type_identifier");
+    string id = identifier();
     parseTreeLogger->logExit("type_identifier");
-    return identifier();
+    return id;
 }
 
 void Parser::unpacked_conformant_array_schema(){
@@ -1981,20 +2053,56 @@ void Parser::variable_declaration(){
         case Kind::ARRAY:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
-                symboltable->insert(
-                    make_pair<string, Token>(
-                        list[i].c_str(),
-                        Token(
-                            TK_A_ARRAY,
-                            list[i].c_str(),
-                            t.getElemKind(),
-                            t.getIndexKind(),
-                            t.getIntLow(),
-                            t.getIntHigh(),
-                            synthesizer->allocateArrayVariableInHeader(t)
-                        )
-                    )
-                );
+                switch(t.getIndexKind()){
+                    case Kind::INTEGER:
+                        symboltable->insert(
+                            make_pair<string, Token>(
+                                list[i].c_str(),
+                                Token(
+                                    TK_A_ARRAY,
+                                    list[i].c_str(),
+                                    t.getElemKind(),
+                                    t.getIndexKind(),
+                                    t.getIntLow(),
+                                    t.getIntHigh(),
+                                    synthesizer->allocateArrayVariableInHeader(t)
+                                )
+                            )
+                        );
+                        break;
+                    case Kind::CHAR:
+                        symboltable->insert(
+                            make_pair<string, Token>(
+                                list[i].c_str(),
+                                Token(
+                                    TK_A_ARRAY,
+                                    list[i].c_str(),
+                                    t.getElemKind(),
+                                    t.getIndexKind(),
+                                    t.getCharLow(),
+                                    t.getCharHigh(),
+                                    synthesizer->allocateArrayVariableInHeader(t)
+                                )
+                            )
+                        );
+                        break;
+                    case Kind::BOOLEAN:
+                        symboltable->insert(
+                            make_pair<string, Token>(
+                                list[i].c_str(),
+                                Token(
+                                    TK_A_ARRAY,
+                                    list[i].c_str(),
+                                    t.getElemKind(),
+                                    t.getIndexKind(),
+                                    synthesizer->allocateArrayVariableInHeader(t)
+                                )
+                            )
+                        );
+                        break;
+                    default:
+                        throw "Array index kind not supported.";
+                }
             }
             break;
         default:

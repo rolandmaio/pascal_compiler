@@ -131,7 +131,7 @@ class Parser{
         Type new_structured_type();
         Type new_type();
         Type ordinal_type();
-        void ordinal_type_identifier();
+        Type ordinal_type_identifier();
         void packed_conformant_array_schema();
         void pointer_type();
         void procedural_parameter_specification();

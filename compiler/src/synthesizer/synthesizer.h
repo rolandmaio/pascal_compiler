@@ -31,6 +31,7 @@ class Synthesizer {
         void genBoolean(bool val);
         void writeFile();
         void writeToInstructions(size_t s);
+        void writeToInstructions(char c);
         void writeKind(Kind k);
         size_t writeStringLiteralToHeader(StringToken strtok);
         size_t allocateStringVariableInHeader();
