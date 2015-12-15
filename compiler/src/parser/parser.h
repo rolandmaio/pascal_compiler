@@ -160,7 +160,7 @@ class Parser{
         void scale_factor();
         Type set_constructor();
         void set_type();
-        void sign();
+        bool sign();
         void signed_integer();
         void signed_number();
         void signed_real();

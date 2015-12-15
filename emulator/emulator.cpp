@@ -490,6 +490,14 @@ void Emulator::executeInstruction(){
             *stack_ptr = *(stack_ptr - 1);
             ++stack_ptr;
             break;
+        case NEGATE_INTEGER:
+            code_ptr = code_ptr + 1;
+            (stack_ptr - 1)->integer = -((stack_ptr - 1)->integer);
+            break;
+        case NEGATE_REAL:
+            code_ptr = code_ptr + 1;
+            (stack_ptr - 1)->real = -((stack_ptr - 1)->real);
+            break;
         default:
             cout << "We shouldn't be here. Opcode: " << (Opcode) *code_ptr << endl;
             exit(1);

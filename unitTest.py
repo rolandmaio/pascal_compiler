@@ -344,6 +344,11 @@ tests = [('writeln test',
           "b := False; A[b] := 0; b := True; A[b] := 1; writeln(A[False], ' ', A[True]);",
           'Unit test failed on array with boolean index test',
           '0 1\n'
+      ), ('negative literals test',
+          '',
+          "writeln('-2 + 2 is: ', -2 + 2); writeln('-3.4 + 2.2 = ', -3.4 + 2.2);",
+          'Unit test failed on negative literals test',
+          '-2 + 2 is: 0\n-3.4 + 2.2 = -1.200000\n'
       )
 ]
 

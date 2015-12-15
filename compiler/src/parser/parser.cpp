@@ -1440,10 +1440,13 @@ void Parser::set_type(){
     parseTreeLogger->logExit("set_type");
 }
 
-void Parser::sign(){
+bool Parser::sign(){
     parseTreeLogger->logEntry("sign");
-    throw NotImplementedError("sign");
+    bool result;
+    result = curtoken.getTag() == MINUS;
+    match(curtoken.getTag());
     parseTreeLogger->logExit("sign");
+    return result;
 }
 
 void Parser::signed_integer(){
@@ -1466,8 +1469,17 @@ void Parser::signed_real(){
 
 Type Parser::simple_expression(){
     parseTreeLogger->logEntry("simple_expression");
-    if(curtoken.getTag() == PLUS || curtoken.getTag() == MINUS) sign();
+    bool negate;
+    if(curtoken.getTag() == PLUS || curtoken.getTag() == MINUS){
+        negate = sign();
+    }
     Type t1 = term(), t2;
+    if(negate){
+        if(t1.getKind() != Kind::INTEGER && t1.getKind() != Kind::REAL){
+            throw "Cannot negate non numeric value.";
+        }
+        synthesizer->genNegateCode(t1.getKind());
+    }
     switch(curtoken.getTag()){
         case PLUS:
             match(PLUS);

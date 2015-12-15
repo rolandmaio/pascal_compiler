@@ -64,6 +64,7 @@ class Synthesizer {
         size_t getInstructionAddress();
         void genAddOne(Kind k);
         void genSubOne(Kind k);
+        void genNegateCode(Kind k);
 
     private:
         string outFileName;

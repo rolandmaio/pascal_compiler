@@ -566,4 +566,17 @@ void Synthesizer::genSubOne(Kind k){
     }
 }
 
+void Synthesizer::genNegateCode(Kind k){
+    switch(k){
+        case Kind::INTEGER:
+            genOpCode(NEGATE_INTEGER);
+            break;
+        case Kind::REAL:
+            genOpCode(NEGATE_REAL);
+            break;
+        default:
+            throw "Negation not implemented for this kind";
+    }
+}
+
 #endif
