@@ -1,16 +1,17 @@
 #ifndef KIND
 #define KIND
 
-enum Kind{
+enum class Kind{
 
-    INTEGER_K,
-    BOOLEAN_K,
-    STRING_K,
-    REAL_K,
-    NIL_K,
-    SUBRANGE_K,
-    ARRAY_K,
-    UNDEFINED_K
+    INTEGER,
+    BOOLEAN,
+    STRING,
+    REAL,
+    NIL,
+    CHAR,
+    SUBRANGE,
+    ARRAY,
+    UNDEFINED
 
 };
 

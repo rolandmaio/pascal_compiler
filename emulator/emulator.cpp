@@ -35,7 +35,7 @@ void Emulator::run(){
 void Emulator::executeInstruction(){
     int x, y, *int_ptr, int_addr;
     float fx, fy, *float_ptr;
-    char *addr, **char_ptr_ptr;
+    char *addr, *char_ptr, **char_ptr_ptr, ca, cb;
     bool bu, bv, *bool_ptr;
     size_t address, idx, idx_low, elem_size;
     StackElement temp_stackelement;
@@ -92,7 +92,7 @@ void Emulator::executeInstruction(){
         case PUSH_ARRAY_ADDRESS:
             code_ptr = code_ptr + 1;
             switch((Kind) *code_ptr){
-                case INTEGER_K:
+                case Kind::INTEGER:
                     code_ptr = code_ptr + sizeof(Kind);
                     idx_low = readAddress();
                     elem_size = readAddress();
@@ -111,6 +111,11 @@ void Emulator::executeInstruction(){
             code_ptr = code_ptr + 1;
             --stack_ptr;
             printf("%d", stack_ptr->integer);
+            break;
+        case WRITE_CHAR:
+            code_ptr = code_ptr + 1;
+            --stack_ptr;
+            printf("%c", stack_ptr->string_ptr[0]);
             break;
         case WRITE_REAL:
             code_ptr = code_ptr + 1;
@@ -169,6 +174,16 @@ void Emulator::executeInstruction(){
             x = (stack_ptr - 1)->integer;
             (stack_ptr - 1)->integer = x + 1;
             break;
+        case CHAR_ADD_ONE:
+            code_ptr = code_ptr + 1;
+            ca = (stack_ptr - 1)->string_ptr[0];
+            (stack_ptr - 1)->string_ptr[0] = ca + 1;
+            break;
+        case CHAR_SUB_ONE:
+            code_ptr = code_ptr + 1;
+            ca = (stack_ptr - 1)->string_ptr[0];
+            (stack_ptr - 1)->string_ptr[0] = ca - 1;
+            break;
         case EQ_INTEGER:
             code_ptr = code_ptr + 1;
             y = (--stack_ptr)->integer;
@@ -209,6 +224,90 @@ void Emulator::executeInstruction(){
             y = (--stack_ptr)->integer;
             x = (--stack_ptr)->integer;
             stack_ptr->boolean = x >= y;
+            ++stack_ptr;
+            break;
+        case EQ_REAL:
+            code_ptr = code_ptr + 1;
+            fy = (--stack_ptr)->real;
+            fx = (--stack_ptr)->real;
+            stack_ptr->boolean = fx == fy;
+            ++stack_ptr;
+            break;
+        case NEQ_REAL:
+            code_ptr = code_ptr + 1;
+            fy = (--stack_ptr)->real;
+            fx = (--stack_ptr)->real;
+            stack_ptr->boolean = fx != fy;
+            ++stack_ptr;
+            break;
+        case LT_REAL:
+            code_ptr = code_ptr + 1;
+            fy = (--stack_ptr)->real;
+            fx = (--stack_ptr)->real;
+            stack_ptr->boolean = fx < fy;
+            ++stack_ptr;
+            break;
+        case GT_REAL:
+            code_ptr = code_ptr + 1;
+            fy = (--stack_ptr)->real;
+            fx = (--stack_ptr)->real;
+            stack_ptr->boolean = fx > fy;
+            ++stack_ptr;
+            break;
+        case LEQ_REAL:
+            code_ptr = code_ptr + 1;
+            fy = (--stack_ptr)->real;
+            fx = (--stack_ptr)->real;
+            stack_ptr->boolean = fx <= fy;
+            ++stack_ptr;
+            break;
+        case GEQ_REAL:
+            code_ptr = code_ptr + 1;
+            fy = (--stack_ptr)->real;
+            fx = (--stack_ptr)->real;
+            stack_ptr->boolean = fx >= fy;
+            ++stack_ptr;
+            break;
+        case EQ_CHAR:
+            code_ptr = code_ptr + 1;
+            cb = (--stack_ptr)->string_ptr[0];
+            ca = (--stack_ptr)->string_ptr[0];
+            stack_ptr->boolean = ca == cb;
+            ++stack_ptr;
+            break;
+        case NEQ_CHAR:
+            code_ptr = code_ptr + 1;
+            cb = (--stack_ptr)->string_ptr[0];
+            ca = (--stack_ptr)->string_ptr[0];
+            stack_ptr->boolean = ca != cb;
+            ++stack_ptr;
+            break;
+        case LT_CHAR:
+            code_ptr = code_ptr + 1;
+            cb = (--stack_ptr)->string_ptr[0];
+            ca = (--stack_ptr)->string_ptr[0];
+            stack_ptr->boolean = ca < cb;
+            ++stack_ptr;
+            break;
+        case GT_CHAR:
+            code_ptr = code_ptr + 1;
+            cb = (--stack_ptr)->string_ptr[0];
+            ca = (--stack_ptr)->string_ptr[0];
+            stack_ptr->boolean = ca > cb;
+            ++stack_ptr;
+            break;
+        case LEQ_CHAR:
+            code_ptr = code_ptr + 1;
+            cb = (--stack_ptr)->string_ptr[0];
+            ca = (--stack_ptr)->string_ptr[0];
+            stack_ptr->boolean = ca <= cb;
+            ++stack_ptr;
+            break;
+        case GEQ_CHAR:
+            code_ptr = code_ptr + 1;
+            cb = (--stack_ptr)->string_ptr[0];
+            ca = (--stack_ptr)->string_ptr[0];
+            stack_ptr->boolean = ca >= cb;
             ++stack_ptr;
             break;
         case REAL_ADDITION:
@@ -282,6 +381,12 @@ void Emulator::executeInstruction(){
             *int_ptr = (stack_ptr - 1)->integer;
             stack_ptr = stack_ptr - 2;
             break;
+        case POP_CHAR:
+            code_ptr = code_ptr + 1;
+            char_ptr = (char*) getPointer((stack_ptr - 2)->address);
+            *char_ptr = ((stack_ptr - 1)->string_ptr)[0];
+            stack_ptr = stack_ptr - 2;
+            break;
         case POP_LOCAL_INTEGER:
             code_ptr = code_ptr + 1;
             x = (--stack_ptr)->integer;
@@ -305,6 +410,11 @@ void Emulator::executeInstruction(){
             stack_ptr->string_ptr = *(char**) getPointer(readAddress());
             ++stack_ptr;
             break;
+        case PUSH_CHAR_VAR:
+            code_ptr = code_ptr + 1;
+            stack_ptr->string_ptr = (char*) getPointer(readAddress());
+            ++stack_ptr;
+            break;
         case PUSH_BOOLEAN_VAR:
             code_ptr = code_ptr + 1;
             stack_ptr->boolean = *(bool*) getPointer(readAddress());
@@ -313,6 +423,16 @@ void Emulator::executeInstruction(){
         case JUMP_FALSE:
             code_ptr = code_ptr + 1;
             if((stack_ptr - 1)->boolean){
+                readAddress();
+            } else {
+                address = headerSize + readAddress();
+                code_ptr = file_data + address;
+            }
+            --stack_ptr;
+            break;
+        case JUMP_TRUE:
+            code_ptr = code_ptr + 1;
+            if(!(stack_ptr - 1)->boolean){
                 readAddress();
             } else {
                 address = headerSize + readAddress();
@@ -344,6 +464,11 @@ void Emulator::executeInstruction(){
         case POP_STACK_ELEMENTS:
             code_ptr = code_ptr + 1;
             stack_ptr = stack_ptr - (readIntAddress() + 1);
+            break;
+        case DUPLICATE:
+            code_ptr = code_ptr + 1;
+            *stack_ptr = *(stack_ptr - 1);
+            ++stack_ptr;
             break;
         default:
             cout << "We shouldn't be here. Opcode: " << (Opcode) *code_ptr << endl;

@@ -38,13 +38,13 @@ class Token {
         Token(Tag t, float v) : tag(t), realValue(v) {}
         Token(Tag t, string l, Kind k, size_t a)
             : tag(t), lexeme(l), kind(k), address(a) { pt = ParameterType::VALUE; }
-        Token(Tag t, string l, Kind k, size_t a, ParameterType p)
-            : tag(t), lexeme(l), kind(k), address(a), pt(p) {}
+        Token(Tag t, string l, Kind k, int a, ParameterType p)
+            : tag(t), lexeme(l), kind(k), reladdress(a), pt(p) {}
         Token(Tag t, string l, Kind k, int a)
             : tag(t), lexeme(l), kind(k), reladdress(a) { }
         Token(Tag t, string l, Kind elem_k, Kind index_k, int low, int high, size_t addr)
             : tag(t), lexeme(l), elem_k(elem_k), index_k(index_k),
-              int_low(low), int_high(high), address(addr) { kind = ARRAY_K; }
+              int_low(low), int_high(high), address(addr) { kind = Kind::ARRAY; }
         Tag getTag(){ return tag; }
         string getLexeme(){ return lexeme; }
         string getPrevLab(){ return prevLab; }
@@ -67,12 +67,15 @@ class Token {
         list<Goto> getListOfGotos(){ return listOfGotos; }
         unordered_map<string, Token> *getLocalSymbolTable(){ return local_symbol_table; }
         void addParameter(Token* tk_ptr){ listOfParameters.push_back(tk_ptr); }
+        bool isReferenceParameter(){ return pt == ParameterType::REFERENCE; }
+        int getParamStorageSize(){ return paramStorageSize; }
+        void setParamStorageSize(int sz){ paramStorageSize = sz; }
 
     private:
         Tag tag;
         string lexeme, str_val, prevLab;
         Kind kind, index_k, elem_k;
-        int value, int_low, int_high, reladdress, num_params;
+        int value, int_low, int_high, reladdress, num_params, paramStorageSize;
         float realValue;
         size_t address;
         list<Goto> listOfGotos;

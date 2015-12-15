@@ -63,6 +63,13 @@ size_t Synthesizer::allocatIntegerVariableInHeader(){
     return addr;
 }
 
+size_t Synthesizer::allocateCharVariableInHeader(){
+    size_t addr = headerSize;
+    headerPtr = headerPtr + sizeof(char);
+    headerSize += sizeof(char);
+    return addr;
+}
+
 size_t Synthesizer::allocateRealVariableInHeader(){
     size_t addr = headerSize,
            size = sizeof(float);
@@ -83,7 +90,7 @@ size_t Synthesizer::allocateArrayVariableInHeader(Type t){
     size_t addr = headerSize,
            size;
     switch(t.getElemKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             size = sizeof(int) * (t.getIntHigh() - t.getIntLow() + 1);
             break;
         default:
@@ -146,17 +153,23 @@ void Synthesizer::genOpCode(Opcode opcode){
 
 void Synthesizer::genPrintCode(Type t){
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(WRITE_INT);
             break;
-        case REAL_K:
+        case Kind::REAL:
             genOpCode(WRITE_REAL);
             break;
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             genOpCode(WRITE_BOOLEAN);
             break;
-        case STRING_K:
+        case Kind::STRING:
             genOpCode(WRITE_STRING);
+            break;
+        case Kind::CHAR:
+            genOpCode(WRITE_CHAR);
+            break;
+        default:
+            throw "genPrintCode not implemented for this Type";
             break;
     }
 }
@@ -166,43 +179,51 @@ void Synthesizer::genPrintLn(){
 }
 
 Type Synthesizer::genAdditionCode(Type t1, Type t2){
-    if(t1.getKind() == INTEGER_K && t2.getKind() == INTEGER_K){
+    if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::INTEGER){
         genOpCode(INTEGER_ADDITION);
-        return Type(INTEGER_K);
+        return Type(Kind::INTEGER);
     }
-    if(t1.getKind() == REAL_K && t2.getKind() == REAL_K){
+    if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::REAL){
         genOpCode(REAL_ADDITION);
-        return Type(REAL_K);
+        return Type(Kind::REAL);
     }
     throw "Failed to look up addition code";
 }
 
 Type Synthesizer::genMultiplicationCode(Type t1, Type t2){
-    if(t1.getKind() == INTEGER_K && t2.getKind() == INTEGER_K){
+    if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::INTEGER){
         genOpCode(INTEGER_MULTIPLICATION);
-        return Type(INTEGER_K);
+        return Type(Kind::INTEGER);
     }
-    if(t1.getKind() == REAL_K && t2.getKind() == REAL_K){
+    if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::REAL){
         genOpCode(REAL_MULTIPLICATION);
-        return Type(REAL_K);
+        return Type(Kind::REAL);
     }
     throw "Failed to look up multiplication code";
 }
 
 Type Synthesizer::genSubtractionCode(Type t1, Type t2){
-    if(t1.getKind() == INTEGER_K && t2.getKind() == INTEGER_K){
+    if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::INTEGER){
         genOpCode(INTEGER_SUBTRACTION);
-        return Type(INTEGER_K);
+        return Type(Kind::INTEGER);
     }
-    if(t1.getKind() == REAL_K && t2.getKind() == REAL_K){
+    if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::REAL){
         genOpCode(REAL_SUBTRACTION);
-        return Type(REAL_K);
+        return Type(Kind::REAL);
     }
     throw "Failed to look up subraction code";
 }
 
 Type Synthesizer::genEqualityCode(Type t1, Type t2){
     if(t1.getKind() == t2.getKind()){
+        return genEqualityCode(t1);
+    } else if (t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
+        genOpCode(SWAP);
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        genOpCode(SWAP);
+        return genEqualityCode(t2);
+    } else if (t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
+        genOpCode(CONVERT_INTEGER_TO_REAL);
         return genEqualityCode(t1);
     } else {
         throw "Equality comparison between t1 and t2 not implemented";
@@ -211,35 +232,57 @@ Type Synthesizer::genEqualityCode(Type t1, Type t2){
 
 Type Synthesizer::genEqualityCode(Type t){
     switch(t.getKind()){
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             genOpCode(EQ_BOOLEAN);
             break;
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(EQ_INTEGER);
             break;
+        case Kind::REAL:
+            genOpCode(EQ_REAL);
+            break;
+        case Kind::CHAR:
+        case Kind::STRING:
+            genOpCode(EQ_CHAR);
+            break;
         default:
-            throw "Equality comparison not implemented for: " + t.getKind();
+            throw "Equality comparison not implemented for this Kind.";
     }
-    return Type(BOOLEAN_K);
+    return Type(Kind::BOOLEAN);
 }
 
 Type Synthesizer::genInequalityCode(Type t){
     switch(t.getKind()){
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             genOpCode(NEQ_BOOLEAN);
             break;
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(NEQ_INTEGER);
+            break;
+        case Kind::REAL:
+            genOpCode(NEQ_REAL);
+            break;
+        case Kind::CHAR:
+        case Kind::STRING:
+            genOpCode(NEQ_CHAR);
             break;
         default:
             throw "Inequality not implemented for this type.";
     }
-    return Type(BOOLEAN_K);
+    return Type(Kind::BOOLEAN);
 }
 
 Type Synthesizer::genInequalityCode(Type t1, Type t2){
     if(t1.getKind() == t2.getKind()){
         return genInequalityCode(t1);
+    } else if (t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        return genInequalityCode(t1);
+    } else if (t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
+        genOpCode(SWAP);
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        genOpCode(SWAP);
+        return genInequalityCode(t2);
     } else {
         throw "Inequality beetween t1 and t2 not implemented.";
     }
@@ -248,6 +291,16 @@ Type Synthesizer::genInequalityCode(Type t1, Type t2){
 Type Synthesizer::genLessThanCode(Type t1, Type t2){
     if(t1.getKind() == t2.getKind()){
         return genLessThanCode(t1);
+    } else if (t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        return genLessThanCode(t1);
+    } else if (t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
+        genOpCode(SWAP);
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        genOpCode(SWAP);
+        return genLessThanCode(t2);
+    } else if (t1.getKind() == Kind::CHAR && t2.getKind() == Kind::STRING){
+        return genLessThanCode(t1);
     } else {
         throw "Less than between t1 and t2 not implemented.";
     }
@@ -255,28 +308,52 @@ Type Synthesizer::genLessThanCode(Type t1, Type t2){
 
 Type Synthesizer::genLessThanCode(Type t){
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(LT_INTEGER);
+            break;
+        case Kind::REAL:
+            genOpCode(LT_REAL);
+            break;
+        case Kind::CHAR:
+        case Kind::STRING:
+            genOpCode(LT_CHAR);
             break;
         default:
             throw "Less than not implemented for this type.";
     }
-    return Type(BOOLEAN_K);
+    return Type(Kind::BOOLEAN);
 }
 
 Type Synthesizer::genGreaterThanCode(Type t){
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(GT_INTEGER);
+            break;
+        case Kind::REAL:
+            genOpCode(GT_REAL);
+            break;
+        case Kind::CHAR:
+        case Kind::STRING:
+            genOpCode(GT_CHAR);
             break;
         default:
             throw "Greater than not implemented for this type.";
     }
-    return Type(BOOLEAN_K);
+    return Type(Kind::BOOLEAN);
 }
 
 Type Synthesizer::genGreaterThanCode(Type t1, Type t2){
     if(t1.getKind() == t2.getKind()){
+        return genGreaterThanCode(t1);
+    } else if (t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        return genGreaterThanCode(t1);
+    } else if (t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
+        genOpCode(SWAP);
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        genOpCode(SWAP);
+        return genGreaterThanCode(t2);
+    } else if (t1.getKind() == Kind::CHAR && t2.getKind() == Kind::STRING){
         return genGreaterThanCode(t1);
     } else {
         throw "Greater than between t1 and t2 not implemented.";
@@ -285,17 +362,34 @@ Type Synthesizer::genGreaterThanCode(Type t1, Type t2){
 
 Type Synthesizer::genLessOrEqualCode(Type t){
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(LEQ_INTEGER);
+            break;
+        case Kind::REAL:
+            genOpCode(LEQ_REAL);
+            break;
+        case Kind::CHAR:
+        case Kind::STRING:
+            genOpCode(LEQ_CHAR);
             break;
         default:
             throw "Less or equal not implemented for this type.";
     }
-    return Type(BOOLEAN_K);
+    return Type(Kind::BOOLEAN);
 }
 
 Type Synthesizer::genLessOrEqualCode(Type t1, Type t2){
     if(t1.getKind() == t2.getKind()){
+        return genLessOrEqualCode(t1);
+    } else if (t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        return genLessOrEqualCode(t1);
+    } else if (t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
+        genOpCode(SWAP);
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        genOpCode(SWAP);
+        return genLessOrEqualCode(t2);
+    } else if (t1.getKind() == Kind::CHAR && t2.getKind() == Kind::STRING){
         return genLessOrEqualCode(t1);
     } else {
         throw "Less or equal between t1 and t2 not implemented.";
@@ -304,17 +398,34 @@ Type Synthesizer::genLessOrEqualCode(Type t1, Type t2){
 
 Type Synthesizer::genGreaterOrEqualCode(Type t){
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(GEQ_INTEGER);
+            break;
+        case Kind::REAL:
+            genOpCode(GEQ_REAL);
+            break;
+        case Kind::CHAR:
+        case Kind::STRING:
+            genOpCode(GEQ_CHAR);
             break;
         default:
             throw "Greater or equal not implemented for this type.";
     }
-    return Type(BOOLEAN_K);
+    return Type(Kind::BOOLEAN);
 }
 
 Type Synthesizer::genGreaterOrEqualCode(Type t1, Type t2){
     if(t1.getKind() == t2.getKind()){
+        return genGreaterOrEqualCode(t1);
+    } else if (t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        return genGreaterOrEqualCode(t1);
+    } else if (t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
+        genOpCode(SWAP);
+        genOpCode(CONVERT_INTEGER_TO_REAL);
+        genOpCode(SWAP);
+        return genGreaterOrEqualCode(t2);
+    } else if (t1.getKind() == Kind::CHAR && t2.getKind() == Kind::STRING){
         return genGreaterOrEqualCode(t1);
     } else {
         throw "Greater or equal between t1 and t2 not implemented.";
@@ -323,20 +434,23 @@ Type Synthesizer::genGreaterOrEqualCode(Type t1, Type t2){
 
 void Synthesizer::genPushVarOpcode(Kind k){
     switch(k){
-        case STRING_K:
+        case Kind::STRING:
             genOpCode(PUSH_STRING_VAR);
             break;
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(PUSH_INT);
             break;
-        case REAL_K:
+        case Kind::REAL:
             genOpCode(PUSH_REAL);
             break;
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             genOpCode(PUSH_BOOLEAN_VAR);
             break;
-        case ARRAY_K:
+        case Kind::ARRAY:
             genOpCode(PUSH_ARRAY_VAR);
+            break;
+        case Kind::CHAR:
+            genOpCode(PUSH_CHAR_VAR);
             break;
         default:
             throw "Push Var Opcode not implemented for this kind";
@@ -345,7 +459,7 @@ void Synthesizer::genPushVarOpcode(Kind k){
 
 void Synthesizer::genPushLocalVarOpcode(Kind k){
     switch(k){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(PUSH_LOCAL_INT);
             break;
         default:
@@ -356,7 +470,7 @@ void Synthesizer::genPushLocalVarOpcode(Kind k){
 
 void Synthesizer::genPushVarBackwardsOpcode(Kind k){
     switch(k){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(PUSH_INT_BACKWARDS);
             break;
         default:
@@ -366,8 +480,11 @@ void Synthesizer::genPushVarBackwardsOpcode(Kind k){
 
 void Synthesizer::genPopVarOpcode(Kind k){
     switch(k){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(POP_INTEGER);
+            break;
+        case Kind::CHAR:
+            genOpCode(POP_CHAR);
             break;
         default:
             throw "genPopVarOpcode not implemented for this kind";
@@ -407,8 +524,11 @@ size_t Synthesizer::getInstructionAddress(){
 
 void Synthesizer::genAddOne(Kind k){
     switch(k){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(INTEGER_ADD_ONE);
+            break;
+        case Kind::CHAR:
+            genOpCode(CHAR_ADD_ONE);
             break;
         default:
             throw "genAddOne not implemented for this kind";
@@ -417,8 +537,11 @@ void Synthesizer::genAddOne(Kind k){
 
 void Synthesizer::genSubOne(Kind k){
     switch(k){
-        case INTEGER_K:
+        case Kind::INTEGER:
             genOpCode(INTEGER_SUB_ONE);
+            break;
+        case Kind::CHAR:
+            genOpCode(CHAR_SUB_ONE);
             break;
         default:
             throw "genSubOne not implemented for this kind";

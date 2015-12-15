@@ -35,6 +35,7 @@ class Synthesizer {
         size_t writeStringLiteralToHeader(StringToken strtok);
         size_t allocateStringVariableInHeader();
         size_t allocatIntegerVariableInHeader();
+        size_t allocateCharVariableInHeader();
         size_t allocateRealVariableInHeader();
         size_t allocateBooleanVariableInHeader();
         size_t allocateArrayVariableInHeader(Type t);

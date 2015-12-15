@@ -1,6 +1,8 @@
 #ifndef PARSER_IMPL
 #define PARSER_IMPL
 
+#include<cstring>
+using std::strlen;
 #include<iostream>
 using std::cout;
 using std::endl;
@@ -52,7 +54,10 @@ void Parser::chainSymbolTable(unordered_map<string, Token>* newSymbolTable){
 }
 
 void Parser::popSymbolTable(){
+
     symboltables.pop_front();
+    symboltable = symboltables.front();
+
 }
 
 bool Parser::parse(){
@@ -159,7 +164,7 @@ Type Parser::array_type(){
     match(OF);
     elem_t = component_type();
     index_t.setElemKind(elem_t.getKind());
-    index_t.setKind(ARRAY_K);
+    index_t.setKind(Kind::ARRAY);
     parseTreeLogger->logExit("array_type");
     return index_t;
 }
@@ -192,26 +197,34 @@ void Parser::assignment_statement(){
     }
     match(ASSIGN);
     Type rhs = expression();
-    if(lhs.getKind() != rhs.getKind()){
+    if(lhs.getKind() == Kind::REAL && rhs.getKind() == Kind::INTEGER){
+        synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
+    } else if(lhs.getKind() != rhs.getKind() &&
+        (lhs.getKind() != Kind::CHAR && rhs.getKind() != Kind::STRING)){
         throw "Incompatible assignment error";
     }
     switch(lhs.getKind()){
-        case STRING_K:
+        case Kind::STRING:
             synthesizer->genOpCode(
                 isProcVar_l ? POP_LOCAL_STRING : POP_STRING
             );
             break;
-        case INTEGER_K:
+        case Kind::INTEGER:
             synthesizer->genOpCode(
                 isProcVar_l ? POP_LOCAL_INTEGER : POP_INTEGER
             );
             break;
-        case REAL_K:
+        case Kind::CHAR:
+            synthesizer->genOpCode(
+                isProcVar_l ? POP_LOCAL_CHAR : POP_CHAR
+            );
+            break;
+        case Kind::REAL:
             synthesizer->genOpCode(
                 isProcVar_l ? POP_LOCAL_REAL : POP_REAL
             );
             break;
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             synthesizer->genOpCode(
                 isProcVar_l ? POP_LOCAL_BOOLEAN : POP_BOOLEAN
             );
@@ -242,7 +255,7 @@ void Parser::block(){
 void Parser::Boolean_expression(){
     parseTreeLogger->logEntry("Boolean_expression");
     Type t = expression();
-    if(t.getKind() != BOOLEAN_K){
+    if(t.getKind() != Kind::BOOLEAN){
         throw "Syntax error: Boolean expression with non-Boolean result";
     }
     parseTreeLogger->logExit("Boolean_expression");
@@ -262,38 +275,100 @@ void Parser::buffer_variable(){
 
 void Parser::case_constant(){
     parseTreeLogger->logEntry("case_constant");
-    throw NotImplementedError("case_constant");
+
+    switch(curtoken.getTag()){
+        case INT:
+            unsigned_integer();
+            break;
+        case STRING:
+            if(strlen(curtoken.getLexeme().c_str()) != 1){
+                throw "case_constant cannot be a string.";
+            }
+            character_string();
+            break;
+        default:
+            throw "case_constant not implemented for this type.";
+            break;
+    }
+
     parseTreeLogger->logExit("case_constant");
 }
 
-void Parser::case_constant_list(){
+size_t Parser::case_constant_list(const Type& caseIndexType){
     parseTreeLogger->logEntry("case_constant_list");
-    throw NotImplementedError("case_constant_list");
+    list<size_t> jumpTruePlaceHolders;
+    size_t jumpFalsePlaceHolder;
+    do{
+
+        if(curtoken.getTag() == COMMA){
+            match(COMMA);
+        }
+
+        synthesizer->genOpCode(DUPLICATE);
+        case_constant();
+        synthesizer->genEqualityCode(caseIndexType);
+
+        if(curtoken.getTag() == COMMA){
+            synthesizer->genOpCode(JUMP_TRUE);
+            jumpTruePlaceHolders.push_back(synthesizer->makePlaceHolderAddress());
+        } else {
+            synthesizer->genOpCode(JUMP_FALSE);
+            jumpFalsePlaceHolder = synthesizer->makePlaceHolderAddress();
+        }
+
+    } while(curtoken.getTag() == COMMA);
+
+    list<size_t>::iterator it;
+    for(it = jumpTruePlaceHolders.begin(); it != jumpTruePlaceHolders.end(); ++it){
+        synthesizer->fillPlaceHolderAddress(*it);
+    }
+
     parseTreeLogger->logExit("case_constant_list");
+    return jumpFalsePlaceHolder;
+
 }
 
-void Parser::case_index(){
+Type Parser::case_index(){
     parseTreeLogger->logEntry("case_index");
-    throw NotImplementedError("case_index");
+    Type t = expression();
+    switch(t.getKind()){
+        case Kind::INTEGER:
+        case Kind::CHAR:
+            break;
+        default:
+            throw "Ordinal type required for case-index of case statement";
+            break;
+    }
     parseTreeLogger->logExit("case_index");
+    return t;
 }
 
-void Parser::case_list_element(){
+void Parser::case_list_element(const Type& caseIndexType){
     parseTreeLogger->logEntry("case_list_element");
-    throw NotImplementedError("case_list_element");
+    size_t placeHolder = case_constant_list(caseIndexType);
+    match(COLON);
+    statement();
+    synthesizer->fillPlaceHolderAddress(placeHolder);
     parseTreeLogger->logExit("case_list_element");
 }
 
 void Parser::case_statement(){
     parseTreeLogger->logEntry("case_statement");
     match(CASE);
-    Type t = expression();
-    if(t.getKind() != INTEGER_K && t.getKind() != BOOLEAN_K){
-        throw "Ordinal type required for case statement control variable!";
-    }
+    Type t = case_index();
     match(OF);
-    while(curtoken.getTag() == INT || curtoken.getTag() == BOOLEAN){
+    while(curtoken.getTag() == INT ||
+          curtoken.getTag() == STRING ||
+          curtoken.getTag() == PLUS ||
+          curtoken.getTag() == MINUS){
+
+        case_list_element(t);
+
     }
+    if(curtoken.getTag() == SEMICOLON){
+        match(SEMICOLON);
+    }
+    match(END);
     parseTreeLogger->logExit("case_statement");
 }
 
@@ -305,7 +380,7 @@ Type Parser::character_string(){
     synthesizer->genAddress(addr);
     match(STRING);
     parseTreeLogger->logExit("character_string");
-    return Type(STRING_K);
+    return Type(Kind::STRING);
 }
 
 Type Parser::component_type(){
@@ -609,21 +684,25 @@ void Parser::for_statement(){
     // Check if the type of the initial-value is compatible with
     // the type of the control variable. For now we will simply
     // check that they are the same.
-    if(cvt.getKind() != ivt.getKind()){
+    if(cvt.getKind() != ivt.getKind()
+        && !(cvt.getKind() == Kind::CHAR && ivt.getKind() == Kind::STRING)){
         throw "Syntax error discovered in for_statement:\nIncompatible control variable and initial value.";
     }
     switch(cvt.getKind()){
-        case STRING_K:
+        case Kind::STRING:
             synthesizer->genOpCode(POP_STRING);
             break;
-        case INTEGER_K:
+        case Kind::INTEGER:
             synthesizer->genOpCode(POP_INTEGER);
             break;
-        case REAL_K:
+        case Kind::REAL:
             synthesizer->genOpCode(POP_REAL);
             break;
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             synthesizer->genOpCode(POP_BOOLEAN);
+            break;
+        case Kind::CHAR:
+            synthesizer->genOpCode(POP_CHAR);
             break;
         default:
             throw "assignment statement not implemented for this type!";
@@ -644,7 +723,8 @@ void Parser::for_statement(){
     }
 
     Type fvt = final_value();
-    if(cvt.getKind() != fvt.getKind()){
+    if(cvt.getKind() != fvt.getKind()
+        && !(cvt.getKind() == Kind::CHAR && fvt.getKind() == Kind::STRING)){
         throw "Syntax error discovered in for_statement:\nIncompatible control variable and final value.";
     }
 
@@ -831,6 +911,8 @@ void Parser::if_statement(){
     size_t placeHolder = synthesizer->makePlaceHolderAddress();
     match(THEN);
     statement();
+    synthesizer->genOpCode(JUMP);
+    size_t jumpPlaceHolder = synthesizer->makePlaceHolderAddress();
     synthesizer->fillPlaceHolderAddress(placeHolder);
     match(SEMICOLON);
     if(curtoken.getTag() == ELSE){
@@ -839,6 +921,7 @@ void Parser::if_statement(){
         lexer->addToStack(curtoken);
         curtoken = Token(SEMICOLON);
     }
+    synthesizer->fillPlaceHolderAddress(jumpPlaceHolder);
     parseTreeLogger->logExit("if_statement");
 }
 
@@ -875,7 +958,7 @@ Type Parser::indexed_variable(){
     }
     synthesizer->writeKind(index_t.getKind());
     switch(array_info.getIndexKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             // Write lower bound as a size_t to instruction byte code.
             synthesizer->writeToInstructions((size_t)array_info.getIntLow());
             // Calculate offset from array address.
@@ -1131,14 +1214,15 @@ void Parser::procedure_heading(){
             )
         )
     );
-    curProcToken = (*symboltable)[curtoken.getLexeme()];
-    // Token& procedureToken = (*symboltable)[curtoken.getLexeme()];
-    chainSymbolTable(curProcToken.getLocalSymbolTable());
+    curProcToken = &(*symboltable)[curtoken.getLexeme()];
+    chainSymbolTable(curProcToken->getLocalSymbolTable());
     match(ID);
     if(curtoken.getTag() == LPAREN){
+        storageSize = 0;
         formal_parameter_list();
     }
-    curProcToken.setNumParams(parameterCounter);
+    curProcToken->setNumParams(parameterCounter);
+    curProcToken->setParamStorageSize(storageSize);
     parseTreeLogger->logExit("procedure_heading");
 }
 
@@ -1159,8 +1243,6 @@ Token Parser::procedure_identifier(){
 void Parser::procedure_statement(){
     parseTreeLogger->logEntry("procedure_statement");
     Token proc = procedure_identifier();
-    cout << "Returning from procedure_identifier()" << endl;
-    cout << "proc.getTag(): " << proc.getTag() << " proc.getLexeme(): " << proc.getLexeme() << endl;
     if(proc.getLexeme() == "read"){
         read_parameter_list();
     } else if(proc.getLexeme() == "readln"){
@@ -1170,11 +1252,13 @@ void Parser::procedure_statement(){
     } else if(proc.getLexeme() == "writeln"){
         writeln_parameter_list();
     } else if(curtoken.getTag() == LPAREN){
+        chainSymbolTable(proc.getLocalSymbolTable());
         actual_parameter_list();
         synthesizer->genOpCode(CALL);
         synthesizer->genAddress(proc.getAddress());
         synthesizer->genOpCode(POP_STACK_ELEMENTS);
-        synthesizer->genAddress(proc.getNumParams());
+        synthesizer->genAddress(proc.getParamStorageSize());
+        popSymbolTable();
     }
     parseTreeLogger->logExit("procedure_statement");
 }
@@ -1348,12 +1432,12 @@ Type Parser::simple_expression(){
             t2 = simple_expression();
             if(t1.getKind() == t2.getKind()){
                 t1 = synthesizer->genAdditionCode(t1, t2);
-            } else if(t1.getKind() == INTEGER_K && t2.getKind() == REAL_K){
+            } else if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(REAL_ADDITION);
-                t1 = Type(REAL_K);
-            } else if(t1.getKind() == REAL_K && t2.getKind() == INTEGER_K){
+                t1 = Type(Kind::REAL);
+            } else if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(REAL_ADDITION);
             } else {
@@ -1365,13 +1449,13 @@ Type Parser::simple_expression(){
             t2 = simple_expression();
             if(t1.getKind() == t2.getKind()){
                 t1 = synthesizer->genSubtractionCode(t1, t2);
-            } else if(t1.getKind() == INTEGER_K && t2.getKind() == REAL_K){
+            } else if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(REAL_SUBTRACTION);
-                t1 = Type(REAL_K);
-            } else if(t1.getKind() == REAL_K && t2.getKind() == INTEGER_K){
+                t1 = Type(Kind::REAL);
+            } else if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(REAL_SUBTRACTION);
             } else {
@@ -1535,8 +1619,8 @@ Type Parser::subrange_type(){
     }
     switch(curtoken.getTag()){
         case INT:
-            t = Type(INTEGER_K);
-            s = Type(SUBRANGE_K, INTEGER_K, low.getValue(), high.getValue());
+            t = Type(Kind::INTEGER);
+            s = Type(Kind::SUBRANGE, Kind::INTEGER, low.getValue(), high.getValue());
             break;
         default:
             throw "Invalid subrange type!";
@@ -1567,13 +1651,13 @@ Type Parser::term(){
             t2 = factor();
             if(t1.getKind() == t2.getKind()){
                 t1 = synthesizer->genMultiplicationCode(t1, t2);
-            } else if(t1.getKind() == INTEGER_K && t2.getKind() == REAL_K){
+            } else if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(REAL_MULTIPLICATION);
-                t1 = Type(REAL_K);
-            } else if(t1.getKind() == REAL_K && t2.getKind() == INTEGER_K){
+                t1 = Type(Kind::REAL);
+            } else if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(REAL_MULTIPLICATION);
             } else {
@@ -1583,24 +1667,24 @@ Type Parser::term(){
         case FSLASH:
             match(FSLASH);
             t2 = factor();
-            if(t1.getKind() == REAL_K && t2.getKind() == REAL_K){
+            if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::REAL){
                 synthesizer->genOpCode(REAL_DIVISION);
-            } else if(t1.getKind() == INTEGER_K && t2.getKind() == INTEGER_K){
+            } else if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::INTEGER){
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(REAL_DIVISION);
-                t1 = Type(REAL_K);
-            } else if(t1.getKind() == REAL_K && t2.getKind() == INTEGER_K){
+                t1 = Type(Kind::REAL);
+            } else if(t1.getKind() == Kind::REAL && t2.getKind() == Kind::INTEGER){
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(REAL_DIVISION);
-            } else if(t1.getKind() == INTEGER_K && t2.getKind() == REAL_K){
+            } else if(t1.getKind() == Kind::INTEGER && t2.getKind() == Kind::REAL){
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(CONVERT_INTEGER_TO_REAL);
                 synthesizer->genOpCode(SWAP);
                 synthesizer->genOpCode(REAL_DIVISION);
-                t1 = Type(REAL_K);
+                t1 = Type(Kind::REAL);
             } else {
                 throw "syntax error: division is only defined on the integers and reals";
             }
@@ -1608,7 +1692,7 @@ Type Parser::term(){
         case DIV:
             match(DIV);
             t2 = factor();
-            if(t1.getKind() != INTEGER_K || t2.getKind() != INTEGER_K){
+            if(t1.getKind() != Kind::INTEGER || t2.getKind() != Kind::INTEGER){
                 throw "Both operands must be of type Integer in integer division.";
             }
             synthesizer->genOpCode(INTEGER_DIVISION);
@@ -1616,7 +1700,7 @@ Type Parser::term(){
         case MOD:
             match(MOD);
             t2 = factor();
-            if(t1.getKind() != INTEGER_K || t2.getKind() != INTEGER_K){
+            if(t1.getKind() != Kind::INTEGER || t2.getKind() != Kind::INTEGER){
                 throw "Modular division is only defined on integers";
             }
             synthesizer->genOpCode(INTEGER_MOD_DIVISION);
@@ -1690,7 +1774,7 @@ Type Parser::unsigned_constant(){
             t = character_string();
             break;
         case BOOLEAN:
-            t = Type(BOOLEAN_K);
+            t = Type(Kind::BOOLEAN);
             synthesizer->genOpCode(PUSH_BOOLEAN);
             synthesizer->genBoolean((bool)curtoken.getValue());
             match(BOOLEAN);
@@ -1699,7 +1783,7 @@ Type Parser::unsigned_constant(){
             t = constant_identifier();
             break;
         case NIL:
-            t = Type(NIL_K);
+            t = Type(Kind::NIL);
             break;
         default:
             throw 1;
@@ -1716,7 +1800,7 @@ Type Parser::unsigned_integer(){
     synthesizer->genAddress(addr);
     match(INT);
     parseTreeLogger->logExit("unsigned_integer");
-    return Type(INTEGER_K);
+    return Type(Kind::INTEGER);
 }
 
 Type Parser::unsigned_number(){
@@ -1740,7 +1824,7 @@ Type Parser::unsigned_real(){
     synthesizer->genAddress(addr);
     match(REAL);
     parseTreeLogger->logExit("unsigned_real");
-    return Type(REAL_K);
+    return Type(Kind::REAL);
 }
 
 void Parser::value_conformant_array_specification(){
@@ -1755,7 +1839,7 @@ void Parser::value_parameter_specification(){
     match(COLON);
     Type t(type_identifier());
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
                 symboltable->insert(
@@ -1764,13 +1848,14 @@ void Parser::value_parameter_specification(){
                         Token(
                             TK_A_VAR,
                             list[i].c_str(),
-                            INTEGER_K,
+                            Kind::INTEGER,
                             parameterCounter++
                         )
                     )
                 );
-            curProcToken.addParameter(&(*symboltable)[list[i].c_str()]);
+                curProcToken->addParameter(&(*symboltable)[list[i].c_str()]);
             }
+            storageSize = storageSize + list.size();
             break;
         default:
             throw "value_parameter_specification not implemented for this kind";
@@ -1809,8 +1894,8 @@ void Parser::variable_declaration(){
     Type t = type_denoter();
     cout << "switching on type_denoter in variable_declaration" << endl;
     switch(t.getKind()){
-        case STRING_K:
-            cout << "In STRING_K" << endl;
+        case Kind::STRING:
+            cout << "In Kind::STRING" << endl;
             for(int i = 0; i < list.size(); ++i){
                 cout << "Checking lis[" << i << "]" << endl;
                 cout << "list[i]: " << list[i] << endl;
@@ -1821,7 +1906,7 @@ void Parser::variable_declaration(){
                         Token(
                             TK_A_VAR,
                             list[i].c_str(),
-                            STRING_K,
+                            Kind::STRING,
                             synthesizer->allocateStringVariableInHeader()
                         )
                     )
@@ -1829,7 +1914,7 @@ void Parser::variable_declaration(){
                 cout << "list[i]: " << list[i] << endl;
             }
             break;
-        case INTEGER_K:
+        case Kind::INTEGER:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
                 symboltable->insert(
@@ -1838,14 +1923,14 @@ void Parser::variable_declaration(){
                         Token(
                             TK_A_VAR,
                             list[i].c_str(),
-                            INTEGER_K,
+                            Kind::INTEGER,
                             synthesizer->allocatIntegerVariableInHeader()
                         )
                     )
                 );
             }
             break;
-        case REAL_K:
+        case Kind::CHAR:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
                 symboltable->insert(
@@ -1854,14 +1939,30 @@ void Parser::variable_declaration(){
                         Token(
                             TK_A_VAR,
                             list[i].c_str(),
-                            REAL_K,
+                            Kind::CHAR,
+                            synthesizer->allocateCharVariableInHeader()
+                        )
+                    )
+                );
+            }
+            break;
+        case Kind::REAL:
+            for(int i = 0; i < list.size(); ++i){
+                symboltable->erase(list[i].c_str());
+                symboltable->insert(
+                    make_pair<string, Token>(
+                        list[i].c_str(),
+                        Token(
+                            TK_A_VAR,
+                            list[i].c_str(),
+                            Kind::REAL,
                             synthesizer->allocateRealVariableInHeader()
                         )
                     )
                 );
             }
             break;
-        case BOOLEAN_K:
+        case Kind::BOOLEAN:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
                 symboltable->insert(
@@ -1870,14 +1971,14 @@ void Parser::variable_declaration(){
                         Token(
                             TK_A_VAR,
                             list[i].c_str(),
-                            BOOLEAN_K,
+                            Kind::BOOLEAN,
                             synthesizer->allocateBooleanVariableInHeader()
                         )
                     )
                 );
             }
             break;
-        case ARRAY_K:
+        case Kind::ARRAY:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
                 symboltable->insert(
@@ -1921,13 +2022,13 @@ Type Parser::variable_identifier(){
     parseTreeLogger->logEntry("variable_identifier");
     Type t;
     switch(curtoken.getKind()){
-        case STRING_K:
-            t = Type(STRING_K);
+        case Kind::STRING:
+            t = Type(Kind::STRING);
             synthesizer->genAddress(curtoken.getAddress());
             match(TK_A_VAR);
             break;
-        case INTEGER_K:
-            t = Type(INTEGER_K);
+        case Kind::INTEGER:
+            t = Type(Kind::INTEGER);
             if(isProcVar){
                 synthesizer->genAddress(curtoken.getRelAddress());
             } else {
@@ -1935,13 +2036,18 @@ Type Parser::variable_identifier(){
             }
             match(TK_A_VAR);
             break;
-        case REAL_K:
-            t = Type(REAL_K);
+        case Kind::CHAR:
+            t = Type(Kind::CHAR);
             synthesizer->genAddress(curtoken.getAddress());
             match(TK_A_VAR);
             break;
-        case BOOLEAN_K:
-            t = Type(BOOLEAN_K);
+        case Kind::REAL:
+            t = Type(Kind::REAL);
+            synthesizer->genAddress(curtoken.getAddress());
+            match(TK_A_VAR);
+            break;
+        case Kind::BOOLEAN:
+            t = Type(Kind::BOOLEAN);
             synthesizer->genAddress(curtoken.getAddress());
             match(TK_A_VAR);
             break;
@@ -1954,13 +2060,12 @@ Type Parser::variable_identifier(){
 
 void Parser::variable_parameter_specification(){
     parseTreeLogger->logEntry("variable_parameter_specification");
-    throw NotImplementedError("variable_parameter_specification");
-    /*
+    match(VAR);
     vector<string> list = identifier_list();
     match(COLON);
     Type t(type_identifier());
     switch(t.getKind()){
-        case INTEGER_K:
+        case Kind::INTEGER:
             for(int i = 0; i < list.size(); ++i){
                 symboltable->erase(list[i].c_str());
                 symboltable->insert(
@@ -1969,18 +2074,19 @@ void Parser::variable_parameter_specification(){
                         Token(
                             TK_A_VAR,
                             list[i].c_str(),
-                            INTEGER_K,
-                            parameterCounter++
+                            Kind::INTEGER,
+                            parameterCounter++,
+                            ParameterType::REFERENCE
                         )
                     )
                 );
+                curProcToken->addParameter(&(*symboltable)[list[i].c_str()]);
             }
             break;
         default:
-            throw "value_parameter_specification not implemented for this kind";
+            throw "variable_parameter_specification not implemented for this kind";
             break;
     }
-    */
     parseTreeLogger->logExit("variable_parameter_specification");
 }
 
@@ -2073,9 +2179,9 @@ void Parser::writeln_parameter_list(){
             match(COMMA);
             write_parameter();
         }
-        synthesizer->genPrintLn();
         match(RPAREN);
     }
+    synthesizer->genPrintLn();
     parseTreeLogger->logExit("writeln_parameter_list");
 }
 

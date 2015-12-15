@@ -41,10 +41,9 @@ class Parser{
         Lexer *lexer;
         list<unordered_map<string, Token>*> symboltables;
         unordered_map<string, Token> *symboltable;
-        Token curtoken, badtoken, curproctoken;
-        Token& curProcToken = curproctoken;
+        Token curtoken, badtoken, *curProcToken;
         bool isProcVar, inProcedureBlock;
-        int level, parameterCounter, localVarCounter;
+        int level, parameterCounter, localVarCounter, storageSize;
         ParseTreeLogger *parseTreeLogger;
         Synthesizer *synthesizer;
         string headLabel;
@@ -66,9 +65,9 @@ class Parser{
         void bound_identifier();
         void buffer_variable();
         void case_constant();
-        void case_constant_list();
-        void case_index();
-        void case_list_element();
+        size_t case_constant_list(const Type& caseIndexType);
+        Type case_index();
+        void case_list_element(const Type& caseIndexType);
         void case_statement();
         Type character_string();
         Type component_type();

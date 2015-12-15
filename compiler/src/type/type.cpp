@@ -5,13 +5,15 @@
 
 Type::Type(string kindName){
     if(kindName == "string"){
-        kind = STRING_K;
+        kind = Kind::STRING;
     } else if(kindName == "integer"){
-        kind = INTEGER_K;
+        kind = Kind::INTEGER;
     } else if(kindName == "real"){
-        kind = REAL_K;
+        kind = Kind::REAL;
     } else if(kindName == "boolean"){
-        kind = BOOLEAN_K;
+        kind = Kind::BOOLEAN;
+    } else if(kindName == "char"){
+        kind = Kind::CHAR;
     } else {
         throw "Type(string kindName) not implemented for: " + kindName;
     }
